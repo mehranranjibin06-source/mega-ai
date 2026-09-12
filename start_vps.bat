@@ -30,6 +30,11 @@ if errorlevel 1 (
   exit /b 1
 )
 
+REM ── ۱.۵) نمایش نسخه‌ی پایتون (باید ۳.۱۰ یا بالاتر باشد)
+echo  [i] نسخه‌ی پایتون:
+python -c "import sys; v=sys.version_info; print('       ', sys.version.split()[0], '(خوب است)' if v>=(3,10) else '(قدیمی! نسخه ۳.۱۰ یا بالاتر لازم است)')"
+echo.
+
 REM ── ۲) رمز (بار اول از تو می‌پرسد و ذخیره می‌کند)
 if exist .env (
   findstr /b /c:"MEGA_PASSWORD=" .env >nul 2>nul
