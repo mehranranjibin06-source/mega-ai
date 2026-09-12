@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
-<title>MehranAiShabestar — مهران‌هوش شبستر</title>
+<title>MehranAiShabestar — دستیار هوش مصنوعی</title>
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <link rel="apple-touch-icon" href="/assets/favicon.png">
 <style>
@@ -285,7 +285,7 @@ $("#ghReposBtn").onclick = async ()=>{
   const log = $("#ghLog"); log.classList.remove("hidden"); log.textContent = "⏳ …";
   try{
     const d = await (await fetch("/api/github/repos?limit=30")).json();
-    log.textContent = d.ok ? ((d.items||[]).map(r=>`${r.private? "🔒":"🌍"} ${r.full_name}  —  ${r.url}`).join("\n") || "مخزنی نیست.")
+    log.textContent = d.ok ? ((d.items||[]).map(r=>`${r.private? "🔒":"🌍"} ${r.full_name} —  ${r.url}`).join("\n") || "مخزنی نیست.")
                            : "❌ "+(d.error||"");
   }catch(e){ log.textContent = "❌ "+e.message; }
 };

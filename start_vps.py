@@ -125,7 +125,7 @@ def lan_ip() -> str:
 
 def main() -> int:
     say("=" * 60)
-    say("   MehranAiShabestar (مهران‌هوش شبستر) — راه‌اندازی روی سرور خودت")
+    say("   MehranAiShabestar — راه‌اندازی روی سرور خودت")
     say("=" * 60)
     say("")
 

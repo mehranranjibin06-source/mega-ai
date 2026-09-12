@@ -17,7 +17,6 @@ FONT_REG = ROOT / "assets" / "fonts" / "Vazirmatn-Regular.ttf"
 LOGO = ROOT / "assets" / "logo_icon.png"
 
 BRAND = "MehranAiShabestar"
-FA = "مهران‌هوش شبستر"
 
 W, H = 1000, 1460
 BG, CARD, ACCENT, TXT, MUTED = (13, 17, 28), (24, 31, 46), (86, 156, 255), (235, 240, 248), (150, 163, 184)
@@ -69,7 +68,7 @@ def build(url: str, out: str | Path) -> Path:
 
     # ── برند
     center(TITLE_Y, BRAND, f_title, TXT)
-    center(SUB_Y, f"{FA} — هوش مصنوعی شخصی", f_sub, MUTED)
+    center(SUB_Y, "هوش مصنوعی شخصی — دستیار همه‌کاره", f_sub, MUTED)
 
     # ── QR
     qr = qrcode.QRCode(box_size=10, border=2, error_correction=qrcode.constants.ERROR_CORRECT_M)

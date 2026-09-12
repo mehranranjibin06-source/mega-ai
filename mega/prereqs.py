@@ -117,9 +117,43 @@ def tool_hint(name: str) -> str:
     return ""
 
 
-def ensure_all(py: str, install: bool = True) -> dict:
+def install_tools(auto: bool = True) -> dict:
+    """نصب خودکار ابزارهای جانبی (ffmpeg) با winget / apt / brew — بدون دخالت کاربر."""
+    done: dict = {}
+    if not missing_tools():
+        return done
+    if not auto or os.environ.get("MEGA_NO_AUTO_TOOLS"):
+        return done
+
+    cmd: list[str] | None = None
+    if os.name == "nt":
+        if shutil.which("winget"):
+            cmd = ["winget", "install", "-e", "--id", "Gyan.FFmpeg", "--silent",
+                   "--accept-package-agreements", "--accept-source-agreements"]
+    else:
+        if shutil.which("apt-get") and hasattr(os, "geteuid") and os.geteuid() == 0:
+            cmd = ["apt-get", "install", "-y", "ffmpeg"]
+        elif shutil.which("brew"):
+            cmd = ["brew", "install", "ffmpeg"]
+    if not cmd:
+        return done
+
+    _say(f"   نصب خودکار ffmpeg: {' '.join(cmd[:3])} …")
+    try:
+        r = subprocess.run(cmd, timeout=1800)
+        done["ffmpeg"] = (r.returncode == 0 and not missing_tools())
+    except Exception as e:  # noqa: BLE001
+        _say(f"   ⚠️  نصب خودکار ابزارها انجام نشد: {e}")
+        done["ffmpeg"] = False
+    return done
+
+
+def ensure_all(py: str, install: bool = True, tools: bool = True) -> dict:
     """همهٔ پیش‌نیازها را بررسی (و در صورت اجازه) نصب می‌کند."""
-    result: dict = {"python_ok": True, "installed": False, "missing_pkgs": [], "missing_tools": []}
+    result: dict = {"python_ok": True, "installed": False, "missing_pkgs": [],
+                    "missing_tools": [], "tools_installed": {}}
+
+
 
     missing = missing_python(py)
     if not missing:
@@ -138,6 +172,9 @@ def ensure_all(py: str, install: bool = True) -> dict:
             _say("   (بدون نصب — با --no-install اجرا شده)")
 
     tools = missing_tools()
+    if tools and install and tools:
+        result["tools_installed"] = install_tools(auto=True)
+        tools = missing_tools()
     result["missing_tools"] = tools
     if not tools:
         _say("🛠  ابزارهای جانبی: ffmpeg نصب است ✅ (ویدیو/صدا آماده)")
