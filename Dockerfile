@@ -12,7 +12,7 @@ VOLUME ["/app/workspace", "/app/data"]
 
 # سلامت واقعی: خود سرور باید جواب بدهد
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD curl -fsS http://localhost:8000/api/health || exit 1
+  CMD curl -fsS "http://localhost:${PORT:-8000}/api/health" || exit 1
 
 # محیط داکر: همان پایتون سیستم، بدون ساخت venv
 ENV MEGA_NO_VENV=1 MEGA_HOST=0.0.0.0 MEGA_PORT=8000
