@@ -41,6 +41,8 @@ AGENT_SYS = """تو «کارگزار مطلق» (Mega Agent) هستی: دستی�
 10. اگر کاربر فایل/عکس/داده فرستاده باشد، اول آن را با ابزار analyze_file (یا برای عکس، بینایی مدل)
     واقعاً تحلیل کن و در پاسخ از یافته‌های همان فایل استفاده کن — نه از حدس.
 11. کارهای سنگین را موازی ببر: چند دستور مستقل را در یک گام با چند بلوک ابزار اجرا کن.
+12. اگر کاربر گفت «روی گیت‌هاب بگذار / پوش کن / مخزن بساز» از ابزار github استفاده کن
+    (action=push_folder یا push_project با repo؛ اگر نامی نگفت یک نام مناسب پیشنهاد بده).
 
 سبک کار: مثل یک مهندس ارشد + کارگردان + تحلیل‌گر که هم‌زمان کار می‌کند.
 """
@@ -71,6 +73,13 @@ AGENT_SPECS: list[dict] = [
      "desc": "از عکس خودِ کاربر پوستر واقعی می‌سازد (برش هوشمند + پرده‌ی تیره + متن فارسی)"},
     {"name": "analyze_file", "args": {"path": "string (مسیر فایل)", "question": "string"},
      "desc": "تحلیل واقعی فایل کاربر: تصویر/داده/کد/متن/سند/آرشیو/صدا/ویدیو + نمودار + گزارش فارسی"},
+    {"name": "github", "args": {"action": "whoami|list_repos|push_folder|push_session|push_project|"
+                                          "read_file|write_file|create_issue|list_issues",
+                                "repo": "string (name یа owner/name)", "folder": "string (مسیر پوشه)",
+                                "path": "string (مسیر فایل داخل مخزن)", "content": "string",
+                                "message": "string", "private": "bool", "branch": "string"},
+     "desc": "اتصال واقعی به گیت‌هاب با کلید کاربر: ساخت مخزن، فرستادن پوشه/پروژه در یک کامیت، "
+             "خواندن/نوشتن فایل، issue — برای وقتی می‌گوید «این را روی گیت‌هابم بگذار»"},
     {"name": "update_libraries", "args": {},
      "desc": "به‌روزرسانی کتابخانه‌ها و گزارش پکیج‌های قدیمی"},
     {"name": "use_council", "args": {"question": "string"},
@@ -257,6 +266,92 @@ class MegaAgent:
                                    for p in artifacts],
                      "dir": str(sdir.name), "run_id": run_id})
 
+    # ------------------------------------------------------------ گیت‌هاب
+    async def _github(self, args: dict, box: SkillBox) -> str:
+        from .github_tool import GitHub, GitHubError, test_token, api_base
+        action = str(args.get("action") or "whoami").strip().lower()
+        repo = str(args.get("repo") or "").strip()
+        if action in ("test", "whoami", "me"):
+            r = await test_token()
+            if not r.get("ok"):
+                return (f"اتصال گیت‌هاب برقرار نشد: {r.get('error')}\nراهنما: {r.get('hint')}"
+                        "\n(کلید را در پنل → ⚙️ تنظیمات → گیت‌هاب بگذار)")
+            return (f"✅ متصل به گیت‌هاب به‌عنوان «{r['login']}»"
+                    f"{' (' + r['name'] + ')' if r.get('name') else ''}\n"
+                    f"دسترسی‌ها: {r.get('scopes')}\nمی‌توانم مخزن بسازم و کد بفرستم.")
+        try:
+            gh = GitHub()
+        except GitHubError as e:
+            return f"کلید گیت‌هاب تنظیم نشده: {e}"
+        try:
+            if action in ("list_repos", "repos"):
+                items = await gh.list_repos(limit=int(args.get("limit") or 30))
+                if not items:
+                    return "هیچ مخزنی پیدا نشد."
+                return json.dumps(items, ensure_ascii=False, indent=1)
+            if action in ("create_repo", "create"):
+                info = await gh.create_repo(repo or str(args.get("name") or ""),
+                                            private=bool(args.get("private", True)),
+                                            description=str(args.get("description") or ""))
+                return f"مخزن ساخته شد: {info['full_name']} → {info['url']} (خصوصی: {info['private']})"
+            if action in ("push_project", "push_self"):
+                res = await gh.push_project(message=str(args.get("message") or "MEGA-AI: انتشار پروژه"),
+                                           repo=repo, private=bool(args.get("private", True)),
+                                           branch=str(args.get("branch") or ""))
+                return json.dumps(res, ensure_ascii=False)
+            if action in ("push_session", "push_workspace"):
+                sess = str(args.get("folder") or args.get("session") or box.dir.name)
+                res = await gh.push_session(sess, repo,
+                                            message=str(args.get("message") or "MEGA-AI: خروجی نشست"),
+                                            private=bool(args.get("private", True)))
+                return json.dumps(res, ensure_ascii=False)
+            if action in ("push_folder", "push"):
+                folder = str(args.get("folder") or args.get("path") or box.dir)
+                fp = self._resolve_folder(folder, box)
+                res = await gh.push_folder(fp, repo,
+                                           message=str(args.get("message") or "MEGA-AI: انتشار پوشه"),
+                                           private=bool(args.get("private", True)),
+                                           branch=str(args.get("branch") or ""),
+                                           description=str(args.get("description") or ""))
+                return json.dumps(res, ensure_ascii=False)
+            if action in ("read_file", "get_file"):
+                got = await gh.get_file(repo, str(args.get("path") or ""),
+                                        ref=str(args.get("branch") or ""))
+                if not got.get("exists"):
+                    return f"فایل «{args.get('path')}» در {repo} پیدا نشد."
+                if got.get("type") == "dir":
+                    return json.dumps(got.get("items"), ensure_ascii=False)
+                return got.get("content", "")[:6000]
+            if action in ("write_file", "put_file"):
+                r = await gh.put_file(repo, str(args.get("path") or ""),
+                                      str(args.get("content") or ""),
+                                      str(args.get("message") or "MEGA-AI: بروزرسانی فایل"),
+                                      branch=str(args.get("branch") or ""))
+                return json.dumps(r, ensure_ascii=False)
+            if action in ("create_issue", "issue"):
+                r = await gh.create_issue(repo, str(args.get("title") or args.get("message") or "بدون عنوان"),
+                                          str(args.get("body") or args.get("content") or ""))
+                return f"issue ساخته شد: #{r['number']} → {r['url']}"
+            if action in ("list_issues", "issues"):
+                return json.dumps(await gh.list_issues(repo, limit=int(args.get("limit") or 20)),
+                                  ensure_ascii=False)
+            return f"عملیات ناشناخته: {action} (API گیت‌هاب: {api_base()})"
+        except GitHubError as e:
+            return f"خطای گیت‌هاب: {e}"
+        except Exception as e:  # noqa: BLE001
+            return f"خطای غیرمنتظره در گیت‌هاب: {type(e).__name__}: {e}"
+
+    def _resolve_folder(self, raw: str, box: SkillBox) -> str:
+        """مسیر یک پوشه را پیدا می‌کند: مطلق، نسبی، یا داخل پوشه‌ی کاری."""
+        cands = [Path(raw), box.dir / raw, WORKSPACE / raw, WORKSPACE / box.dir.name / raw]
+        for c in cands:
+            try:
+                if c.is_dir():
+                    return str(c.resolve())
+            except Exception:
+                continue
+        return str(box.dir)
+
     # ------------------------------------------------------------ مسیرها
     def _resolve(self, raw: str, box: SkillBox) -> Optional[Path]:
         """مسیر فایل کاربر را پیدا می‌کند: مطلق، نسبی، فقط نام فایل، یا داخل پوشه‌ی نشست."""
@@ -349,6 +444,8 @@ class MegaAgent:
                                       ratio=str(args.get("ratio") or "9:16"),
                                       theme=str(args.get("theme") or "بنفش شب"))
                 return json.dumps(r, ensure_ascii=False)
+            if name == "github":
+                return await self._github(args, box)
             if name == "analyze_file":
                 fp = self._resolve(str(args.get("path") or ""), box)
                 if not fp or not Path(fp).is_file():

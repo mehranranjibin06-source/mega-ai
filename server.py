@@ -143,6 +143,101 @@ async def workspace_list(path: str = ""):
     return {"ok": True, "path": path, "items": items}
 
 
+@app.get("/api/github")
+async def github_status():
+    """وضعیت اتصال گیت‌هاب (بدون افشای کلید)."""
+    from mega.github_tool import GitHub, api_base, token_from_env
+    tok = token_from_env()
+    out: dict = {"ok": True, "configured": bool(tok), "api": api_base(),
+                 "token_hint": (tok[:6] + "…" + tok[-4:]) if len(tok) > 12 else ("دارد" if tok else ""),
+                 "env_key": "GITHUB_TOKEN"}
+    if tok:
+        try:
+            gh = GitHub()
+            me = await gh.whoami()
+            out.update({"login": me.get("login"), "name": me.get("name"),
+                        "avatar": me.get("avatar"), "connected": True})
+        except Exception as e:  # noqa: BLE001
+            out.update({"connected": False, "error": str(e)[:200]})
+    return out
+
+
+@app.post("/api/github/token")
+async def github_token(payload: dict):
+    """ذخیره‌ی کلید گیت‌هاب + تست واقعی اتصال."""
+    from mega.github_tool import save_token, test_token
+    tok = (payload.get("token") or "").strip()
+    if not tok:
+        return JSONResponse({"ok": False, "error": "توکن خالی است"}, status_code=400)
+    if payload.get("save", True):
+        save_token(tok)
+    res = await test_token(tok)
+    if payload.get("save", True) and not res.get("ok"):
+        from mega.config import save_keys
+        save_keys({"GITHUB_TOKEN": ""})          # توکن بی‌اعتبار ذخیره نماند
+    return res
+
+
+@app.get("/api/github/repos")
+async def github_repos(limit: int = 30):
+    """فهرست مخزن‌های کاربر."""
+    from mega.github_tool import GitHub, GitHubError
+    try:
+        gh = GitHub()
+        return {"ok": True, "items": await gh.list_repos(limit=limit)}
+    except GitHubError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"ok": False, "error": f"{type(e).__name__}: {e}"}, status_code=400)
+
+
+@app.post("/api/github/push")
+async def github_push(payload: dict):
+    """فرستادن پروژه (یا خروجی یک نشست) به گیت‌هاب — با پیشرفت زنده (SSE)."""
+    from mega.github_tool import GitHub, GitHubError
+    repo = (payload.get("repo") or "").strip()
+    if not repo:
+        return JSONResponse({"ok": False, "error": "نام مخزن را بده"}, status_code=400)
+    target = (payload.get("target") or "project").strip()     # project | session | folder
+    session = (payload.get("session") or "").strip()
+    folder = (payload.get("folder") or "").strip()
+    private = bool(payload.get("private", True))
+    message = (payload.get("message") or "MEGA-AI: انتشار خودکار").strip()
+
+    async def gen():
+        def send(obj: dict) -> str:
+            return f"data: {json.dumps(obj, ensure_ascii=False)}\n\n"
+        try:
+            gh = GitHub()
+        except GitHubError as e:
+            yield send({"type": "error", "message": str(e)})
+            return
+        try:
+            if target == "session" and session:
+                coro = gh.push_session(session, repo, private=private, message=message)
+            elif target == "folder" and folder:
+                coro = gh.push_folder(WORKSPACE / folder if not Path(folder).is_absolute() else folder,
+                                      repo, private=private, message=message)
+            else:
+                coro = gh.push_project(repo=repo, private=private, message=message)
+            task = asyncio.create_task(coro)
+            # پیام‌های مرحله‌ای را از طریق یک صف کوچک می‌فرستیم
+            while not task.done():
+                yield send({"type": "progress", "message": "در حال فرستادن…"})
+                await asyncio.sleep(1.2)
+            res = await task
+            yield send({"type": "done", **res})
+        except GitHubError as e:
+            yield send({"type": "error", "message": str(e)})
+        except Exception as e:  # noqa: BLE001
+            yield send({"type": "error", "message": f"{type(e).__name__}: {e}"})
+        yield 'data: {"type":"end"}\n\n'
+
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache, no-transform",
+                                      "X-Accel-Buffering": "no"})
+
+
 @app.get("/api/system")
 async def system_info():
     """وضعیت واقعی همین کامپیوتر: پایتون، ابزارها، کتابخانه‌ها، منابع."""

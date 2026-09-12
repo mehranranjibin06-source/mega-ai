@@ -155,6 +155,28 @@
     <div id="promptList" style="margin-top:10px"><span class="hint">در حال بارگذاری…</span></div>
   </details>
 
+  <details class="card" id="ghCard">
+    <summary style="cursor:pointer;font-weight:700;font-size:16px">🔗 گیت‌هاب — پروژه و خروجی‌هایت را روی حساب خودت بگذار</summary>
+    <div id="ghStatus" class="status" style="margin-top:10px">…</div>
+    <div class="row" style="margin-top:8px">
+      <input id="ghToken" type="password" placeholder="توکن گیت‌هاب (ghp_… یا github_pat_…) — از github.com/settings/tokens" style="flex:1;min-width:220px;border:1.5px solid var(--line);border-radius:14px;padding:11px">
+      <button class="primary" id="ghTestBtn">🔗 تست و ذخیره</button>
+      <button class="ghost" id="ghReposBtn">📚 مخزن‌های من</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input id="ghRepoName" placeholder="نام مخزن (مثلاً mega-ai)" style="flex:1;min-width:160px;border:1.5px solid var(--line);border-radius:14px;padding:11px">
+      <label class="hint" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="ghPrivate" checked> خصوصی</label>
+      <button class="ghost" id="ghPushSessionBtn">📤 خروجی‌های این نشست</button>
+      <button class="ghost" id="ghPushProjectBtn">🚀 خودِ پروژه MEGA-AI</button>
+    </div>
+    <div class="progress" id="ghProgress"><i></i></div>
+    <div class="log hidden" id="ghLog"></div>
+    <div class="hint" style="margin-top:8px">
+      توکن فقط در فایل <code>.env</code> روی همین کامپیوتر ذخیره می‌شود (دسترسی ۶۰۰) و هیچ‌جا فرستاده نمی‌شود.
+      فایل‌های <code>.env</code>، <code>data/</code> و <code>workspace/</code> هرگز آپلود نمی‌شوند.
+    </div>
+  </details>
+
   <section id="chat"></section>
 
   <section class="card">
@@ -229,6 +251,74 @@ const CHIPS = [
 ];
 
 /* ─── راه‌اندازی */
+/* ─── گیت‌هاب ─── */
+async function ghStatus(){
+  try{
+    const d = await (await fetch("/api/github")).json();
+    const el = $("#ghStatus");
+    if(!d.configured){ el.innerHTML = `<span class="warn">هنوز وصل نیست</span> — توکن گیت‌هاب را بچسبان و «🔗 تست و ذخیره» را بزن.`; return d; }
+    el.innerHTML = d.connected
+      ? `<span class="ok">✅ وصل به گیت‌هاب</span> — کاربر <b>${esc(d.login||"")}</b>${d.name? " ("+esc(d.name)+")":""} · کلید: ${esc(d.token_hint||"")}`
+      : `<span class="warn">توکن ذخیره شده ولی وصل نشد</span> — ${esc(d.error||"")}`;
+    return d;
+  }catch(e){ $("#ghStatus").textContent = "وضعیت خوانده نشد."; }
+}
+$("#ghCard").addEventListener("toggle", ()=>{ if($("#ghCard").open) ghStatus(); });
+$("#ghTestBtn").onclick = async ()=>{
+  const tok = $("#ghToken").value.trim();
+  if(!tok) return alert("توکن را بچسبان.");
+  $("#ghTestBtn").disabled = true; $("#ghTestBtn").textContent = "⏳ بررسی…";
+  try{
+    const r = await (await fetch("/api/github/token",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({token:tok, save:true})})).json();
+    $("#ghLog").classList.remove("hidden");
+    $("#ghLog").textContent = r.ok
+      ? `✅ متصل شدی: ${r.login}${r.name? " ("+r.name+")":""}\nدسترسی‌ها: ${r.scopes}\n${r.can_push? "اجازه‌ی ساخت مخزن و فرستادن کد را داری ✅":"⚠️ این توکن دسترسی نوشتن ندارد."}`
+      : `❌ ${r.error||"ناموفق"}\n${r.hint||""}`;
+    $("#ghToken").value = ""; ghStatus();
+  }catch(e){ alert("خطای شبکه: "+e.message); }
+  $("#ghTestBtn").disabled = false; $("#ghTestBtn").textContent = "🔗 تست و ذخیره";
+};
+$("#ghReposBtn").onclick = async ()=>{
+  const log = $("#ghLog"); log.classList.remove("hidden"); log.textContent = "⏳ …";
+  try{
+    const d = await (await fetch("/api/github/repos?limit=30")).json();
+    log.textContent = d.ok ? ((d.items||[]).map(r=>`${r.private? "🔒":"🌍"} ${r.full_name}  —  ${r.url}`).join("\n") || "مخزنی نیست.")
+                           : "❌ "+(d.error||"");
+  }catch(e){ log.textContent = "❌ "+e.message; }
+};
+async function ghPush(target){
+  const repo = $("#ghRepoName").value.trim();
+  if(!repo) return alert("نام مخزن را بنویس (مثلاً mega-ai).");
+  const log = $("#ghLog"); log.classList.remove("hidden"); log.textContent = "⏳ در حال فرستادن…";
+  $("#ghProgress").classList.add("on");
+  const body = {repo, private:$("#ghPrivate").checked, target,
+                session: (typeof SESSION!=="undefined"? SESSION : ""),
+                message:"MEGA-AI: انتشار خودکار از پنل"};
+  try{
+    const res = await fetch("/api/github/push",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+    const reader = res.body.getReader(), dec = new TextDecoder(); let buf="";
+    while(true){
+      const {value,done} = await reader.read(); if(done) break;
+      buf += dec.decode(value,{stream:true}); const parts = buf.split("\n\n"); buf = parts.pop();
+      for(const part of parts){
+        const line = part.split("\n").find(l=>l.startsWith("data: ")); if(!line) continue;
+        let ev; try{ ev = JSON.parse(line.slice(6)); }catch(e){ continue; }
+        if(ev.type==="progress"){ log.textContent = "⏳ " + (ev.message||"…"); }
+        if(ev.type==="done"){
+          log.textContent = `✅ فرستاده شد\nمخزن: ${ev.repo}\nشاخه: ${ev.branch}\nکامیت: ${(ev.commit||"").slice(0,10)}\nفایل‌ها: ${ev.files}` +
+            (ev.warnings?.length? `\n\nرد‌شده‌ها:\n`+ev.warnings.join("\n") : "");
+          addBubble("ai", `کدت روی گیت‌هاب نشست ✅\n${ev.url}\n\nآدرس کلون:\n\`git clone ${ev.url}.git\``);
+        }
+        if(ev.type==="error"){ log.textContent = "❌ " + (ev.message||"خطا"); }
+      }
+    }
+  }catch(e){ log.textContent = "❌ "+e.message; }
+  $("#ghProgress").classList.remove("on"); ghStatus();
+}
+$("#ghPushSessionBtn").onclick = ()=> ghPush("session");
+$("#ghPushProjectBtn").onclick = ()=> ghPush("project");
+
 async function loadPrompts(){
   try{
     const d = await (await fetch("/api/prompts")).json();
@@ -261,7 +351,7 @@ async function boot(){
   const st = await health();
   // اگر سرویسی وصل است، کارت راه‌اندازی را جمع کن
   if(!st.demo || st.demo_model){ $("#setupCard").classList.add("hidden"); }
-  loadFiles(); loadUploads(); loadPrompts();
+  loadFiles(); loadUploads(); loadPrompts(); ghStatus();
 }
 function fmtSize(b){ return b>1048576? (b/1048576).toFixed(1)+" MB" : Math.max(1,Math.round(b/1024))+" KB"; }
 function fileIcon(n){const e=(n.split(".").pop()||"").toLowerCase();
