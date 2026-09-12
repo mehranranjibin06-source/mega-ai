@@ -1,30 +1,33 @@
 @echo off
+REM  MEGA-AI -- bootstrap (clone-or-update then run). ASCII only.
 chcp 65001 >nul
-title نصب و اجرای MEGA-AI
+title MEGA-AI bootstrap
 setlocal
-echo ═══════════════════════════════════════════
-echo   نصب و اجرای MEGA-AI روی این کامپیوتر
-echo ═══════════════════════════════════════════
 echo.
-set /p REPO="آدرس مخزن گیت‌هاب: "
-if "%REPO%"=="" (echo آدرسی وارد نشد. & pause & exit /b 1)
+echo   ============================================
+echo     MEGA-AI  -  install / update and run
+echo   ============================================
+echo.
+set /p REPO="GitHub repository URL: "
+if "%REPO%"=="" (echo   No URL given. & pause & exit /b 1)
 set DEST=%USERPROFILE%\mega-ai
 
 where git >nul 2>nul
 if errorlevel 1 (
   echo.
-  echo گیت نصب نیست — یا از https://git-scm.com/download/win نصب کن،
-  echo یا در گیت‌هاب دکمه‌ی «Code → Download ZIP» را بزن و فایل را باز کن و start.bat را اجرا کن.
+  echo   [!] Git is not installed.
+  echo       Either install it from https://git-scm.com/download/win
+  echo       or use GitHub "Code - Download ZIP", extract it and run start.bat
   pause & exit /b 1
 )
 
 if exist "%DEST%\.git" (
-  echo ▸ به‌روزرسانی نسخه‌ی موجود…
+  echo   Updating existing copy ...
   cd /d "%DEST%" & git pull --ff-only
 ) else (
-  echo ▸ دانلود پروژه در %DEST% …
+  echo   Downloading into %DEST% ...
   git clone "%REPO%" "%DEST%"
   cd /d "%DEST%"
 )
-echo ▸ اجرا…
+echo   Starting ...
 call start.bat

@@ -1,37 +1,23 @@
 @echo off
-REM ────────────────────────────────────────────────────────────
-REM   ابرهوش — اجرای روی لپ‌تاپ + گرفتن لینک برای گوشی (ویندوز)
-REM   فقط روی همین فایل دوبار کلیک کن. پنجره را باز بگذار.
-REM ────────────────────────────────────────────────────────────
+REM  MEGA-AI -- run + get a public link for the phone (ASCII only).
+REM  Persian messages come from cloud_link.py
 chcp 65001 >nul
 cd /d "%~dp0"
-title ابرهوش
+title MEGA-AI (cloud link)
 
-echo.
-echo   ============================================
-echo      ابرهوش  -  اجرا روی لپ‌تاپ + لینک عمومی
-echo   ============================================
-echo.
-
-REM ۱) پایتون نصب است؟
 where python >nul 2>nul
-if errorlevel 1 (
-  echo   [!] پایتون روی این کامپیوتر نصب نیست.
-  echo.
-  echo   این آدرس را در مرورگر باز کن و نسخه‌ی Python 3.12 را نصب کن:
-  echo        https://www.python.org/downloads/
-  echo.
-  echo   مهم: در صفحه‌ی نصب، تیک "Add python.exe to PATH" را بزن.
-  echo.
-  echo   بعد از نصب، دوباره روی همین فایل کلیک کن.
-  pause
-  exit /b 1
-)
+if errorlevel 1 goto nopython
 
-REM ۲) اجرا (بار اول کتابخانه‌ها را خودش نصب می‌کند: چند دقیقه)
 python cloud_link.py
-
 echo.
-echo   برنامه بسته شد.
-echo   برای اجرای دوباره، روی همین فایل کلیک کن.
 pause
+exit /b 0
+
+:nopython
+echo.
+echo   [!] Python not found.
+echo   Install "Python 3.11" or newer from https://www.python.org/downloads/
+echo   IMPORTANT: tick "Add python.exe to PATH" during setup.
+echo.
+pause
+exit /b 1

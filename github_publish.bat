@@ -1,29 +1,28 @@
 @echo off
+REM  MEGA-AI -- publish this project to your GitHub repo (Windows). ASCII only.
 chcp 65001 >nul
-title انتشار MEGA-AI روی گیت‌هاب
+title MEGA-AI publish to GitHub
 cd /d "%~dp0"
 
-echo ═══════════════════════════════════════════
-echo   انتشار روی گیت‌هاب (ویندوز)
-echo ═══════════════════════════════════════════
 echo.
-echo این اسکریپت پروژه را کامیت می‌کند و به مخزن تو می‌فرستد.
+echo   ============================================
+echo     Publish MEGA-AI to GitHub
+echo   ============================================
 echo.
-echo ۱) اول در مرورگر یک مخزن خالی بساز:  github.com/new
-echo    (نام: mega-ai   ، بدون README/gitignore)
-echo ۲) آدرس مخزن را همین‌جا بچسبان. مثال:
-echo    https://github.com/username/mega-ai.git
+echo   1) Create an EMPTY repo first:  https://github.com/new
+echo      (name: mega-ai   -   no README, no .gitignore)
+echo   2) Paste its URL below. Example:
+echo      https://github.com/username/mega-ai.git
 echo.
+set /p REMOTE="Repository URL: "
+if "%REMOTE%"=="" (echo   No URL given. & pause & exit /b 1)
 
-set /p REMOTE="آدرس مخزن: "
-if "%REMOTE%"=="" (echo آدرسی وارد نشد. & pause & exit /b 1)
-
-set /p TOKEN="توکن گیت‌هاب (اختیاری — Enter برای رد کردن): "
+set /p TOKEN="GitHub token (optional - press Enter to skip): "
 
 where git >nul 2>nul
 if errorlevel 1 (
   echo.
-  echo گیت نصب نیست. از https://git-scm.com/download/win نصبش کن و دوباره اجرا کن.
+  echo   [!] Git is not installed. Get it from https://git-scm.com/download/win
   pause & exit /b 1
 )
 
@@ -32,9 +31,9 @@ if not exist .git (
   git branch -M main
 )
 git add -A
-git -c user.email="mega-ai@local" -c user.name="MEGA-AI" commit -q -m "MEGA-AI: پنل آسان + آپلود و تحلیل فایل + اجراکننده محلی" 2>nul
+git -c user.email="mega-ai@local" -c user.name="MEGA-AI" commit -q -m "MEGA-AI update" 2>nul
 
-for /f "tokens=*" %%c in ('git rev-parse --short HEAD') do echo کامیت فعلی: %%c
+for /f "tokens=*" %%c in ('git rev-parse --short HEAD') do echo   Current commit: %%c
 
 if "%TOKEN%"=="" (
   git remote remove origin 2>nul
@@ -48,13 +47,14 @@ if "%TOKEN%"=="" (
 git push -u origin main
 if errorlevel 1 (
   echo.
-  echo ❌ فرستادن نشد. چند احتمال:
-  echo    • توکن لازم است (برای مخزن خصوصی یا وقتی رمز عبور قبول نشود)
-  echo    • آدرس اشتباه است  •  اینترنت/پروکسی
+  echo   [X] Push failed. Possible reasons:
+  echo       - token required / invalid
+  echo       - wrong repository URL
+  echo       - internet or proxy problem
   pause & exit /b 1
 )
 
 if not "%TOKEN%"=="" git remote set-url origin "%REMOTE%"
 echo.
-echo ✅ انجام شد! مخزن تو: %REMOTE%
+echo   [OK] Done! Your repo: %REMOTE%
 pause
