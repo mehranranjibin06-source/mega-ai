@@ -176,11 +176,28 @@ def make_qr(url: str, out: Path) -> bool:
 
 
 # ───────────────────────── اصلی ─────────────────────────
+def prepare_python(no_install: bool = False) -> str:
+    """محیط مجازی و کتابخانه‌ها را آماده می‌کند و مسیر پایتونِ آماده را برمی‌گرداند."""
+    try:
+        from run_local import ensure_deps, ensure_venv  # همان منطق نصبِ اجراکننده‌ی محلی
+    except Exception as e:  # noqa: BLE001
+        log(f"ℹ️  آماده‌سازی خودکار ممکن نشد ({e}) — با پایتون فعلی ادامه می‌دهم.")
+        return sys.executable
+    try:
+        py = ensure_venv()
+        ensure_deps(py, install=not no_install)
+        return py
+    except Exception as e:  # noqa: BLE001
+        log(f"⚠️  نصب کتابخانه‌ها کامل نشد ({e}) — با پایتون فعلی ادامه می‌دهم.")
+        return sys.executable
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="اجرای ابرهوش روی لپ‌تاپ + لینک عمومی")
     ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8000)))
     ap.add_argument("--no-server", action="store_true", help="سرور را خودت بالا آورده‌ای")
     ap.add_argument("--no-qr", action="store_true")
+    ap.add_argument("--no-install", action="store_true", help="کتابخانه‌ها را نصب نکن")
     ap.add_argument("--cloudflared", default=None)
     args = ap.parse_args()
 
@@ -189,6 +206,9 @@ def main() -> int:
     log("  ابرهوش — اجرای محلی + لینک عمومی (Cloudflare Tunnel)")
     log("=" * 62)
 
+    # ۰) آماده‌سازی پایتون/کتابخانه‌ها (بار اول چند دقیقه طول می‌کشد)
+    py = prepare_python(no_install=args.no_install)
+
     # ۱) سرور
     if args.no_server:
         log(f"ℹ️  فرض می‌کنیم سرور روی پورت {args.port} بالاست.")
@@ -196,7 +216,7 @@ def main() -> int:
         log(f"ℹ️  پورت {args.port} از قبل باز است → سرور جدید اجرا نمی‌کنم.")
     else:
         log(f"🚀 اجرای سرور روی پورت {args.port} …")
-        procs.append(subprocess.Popen([sys.executable, str(ROOT / "server.py")], cwd=str(ROOT)))
+        procs.append(subprocess.Popen([py, str(ROOT / "server.py")], cwd=str(ROOT)))
 
     # منتظر بالا آمدن سرور
     for _ in range(40):
@@ -257,7 +277,16 @@ def main() -> int:
         log(f"  📶 در همان وای‌فای (بدون اینترنت/VPN):  http://{ip}:{args.port}")
     if not args.no_qr:
         out = ROOT / "cloud_qr.png"
-        if make_qr(url, out):
+        made = False
+        try:  # پوستر با پایتونِ آماده‌شده ساخته می‌شود (qrcode/Pillow داخل .venv)
+            r = subprocess.run([py, str(ROOT / "make_qr.py"), url, str(out)],
+                               cwd=str(ROOT), capture_output=True, text=True, timeout=120)
+            made = r.returncode == 0 and out.exists()
+        except Exception:  # noqa: BLE001
+            made = False
+        if not made:
+            made = make_qr(url, out)
+        if made:
             log(f"  📱 پوستر QR: {out}")
     log("")
     log("  برای بستن: Ctrl+C  (تا وقتی لپ‌تاپ روشن است لینک زنده می‌ماند)")
