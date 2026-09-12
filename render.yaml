@@ -1,0 +1,26 @@
+# Render Blueprint — استقرار همیشه‌بیدار «ابرهوش» (پلن رایگان)
+# روش استفاده:
+#   ۱) کد را روی گیت‌هاب خودت بگذار (GITHUB.md یا پنل 🔗 یا github_publish.sh)
+#   ۲) render.com → Sign up (با گیت‌هاب) → New → Blueprint → همین مخزن را انتخاب کن → Apply
+# نتیجه: یک آدرس https://<name>.onrender.com که روی گوشی باز می‌شود.
+#
+# نکته‌ها:
+#   • پلن free: بعد از ۱۵ دقیقه بی‌کاری می‌خوابد و با اولین بازدید ~۱ دقیقه‌ای بیدار می‌شود.
+#   • ۷۵۰ ساعت در ماه رایگان، بدون کارت اعتباری.
+#   • کلیدهای API را در Dashboard → Environment بگذار (نه داخل مخزن).
+services:
+  - type: web
+    name: mega-ai
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: MEGA_NO_VENV
+        value: "1"
+      - key: MEGA_HOST
+        value: "0.0.0.0"
+      # کلیدها را از داشبورد Render اضافه کن (نمونه):
+      # - key: AVALAI_API_KEY
+      #   sync: false

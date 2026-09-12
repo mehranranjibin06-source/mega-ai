@@ -36,12 +36,23 @@ load_env()
 STATE: dict = {"settings": SETTINGS}
 
 
+def _listen_port() -> int:
+    """پورت شنود: اول PORT (میزبان‌های ابری مثل Render)، بعد MEGA_PORT، بعد ۸۰۰۰."""
+    for key in ("PORT", "MEGA_PORT"):
+        raw = os.environ.get(key)
+        if raw:
+            try:
+                return int(raw)
+            except ValueError:
+                pass
+    return 8000
+
+
 def _maybe_bridge() -> None:
     """اگر هیچ کلید واقعی نیست، مدل نمایشی داخلی را وصل کن تا سیستم کار کند."""
     from mega import demo_model
     if not configured_providers():
-        port = int(os.environ.get("PORT", "8000"))
-        demo_model.enable(app, port)
+        demo_model.enable(app, _listen_port())
 
 
 @app.get("/")
@@ -806,7 +817,7 @@ _maybe_bridge()
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("MEGA_PORT") or os.environ.get("PORT", "8000"))
+    port = _listen_port()
     host = os.environ.get("MEGA_HOST", "0.0.0.0")
     shown = "localhost" if host in ("127.0.0.1", "localhost") else host
     print(f"\n  MEGA-AI آماده است →  http://{shown}:{port}\n")
