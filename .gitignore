@@ -1,0 +1,26 @@
+# ── کلیدها و داده‌ی خصوصی (هرگز کامیت نشود)
+.env
+data/
+workspace/
+skills/installed-pip.txt
+
+# ── پایتون
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── سیستم و ادیتور
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# ── خروجی‌های موقت
+*.bundle
+/tmp/

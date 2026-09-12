@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MEGA-AI — کارگزار مطلق اختصاصی</title>
+<style>
+  :root{
+    --bg:#080c1a; --bg2:#101731; --card:#141c38; --card2:#1b2448; --line:#26305a;
+    --txt:#e9edff; --dim:#98a3cf; --accent:#7c5cff; --accent2:#22d3ee;
+    --ok:#34d399; --warn:#fbbf24; --err:#f87171; --radius:16px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 700px at 85% -10%,#1c2549 0,#080c1a 55%);
+       background-color:#080c1a;color:var(--txt);font-family:Vazirmatn,Segoe UI,Tahoma,system-ui,sans-serif;font-size:15px}
+  a{color:var(--accent2)}
+  header{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);
+         position:sticky;top:0;backdrop-filter:blur(12px);background:#080c1acc;z-index:30;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px}
+  .logo svg{width:28px;height:28px}
+  .badge{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
+  .badge.good{border-color:#1f7a5a;color:var(--ok);background:#0d2b22}
+  .badge.demo{border-color:#7a5a1f;color:var(--warn);background:#2b2210}
+  .grow{flex:1}
+  nav{display:flex;gap:4px;background:var(--bg2);padding:4px;border-radius:12px;border:1px solid var(--line);flex-wrap:wrap}
+  nav button{padding:7px 13px;border:0;background:transparent;border-radius:9px;font-size:13.5px;color:var(--txt);cursor:pointer}
+  nav button.on{background:var(--accent);font-weight:700}
+  button,select,input,textarea{font-family:inherit;font-size:14px;color:var(--txt)}
+  button{cursor:pointer;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px 14px}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:linear-gradient(135deg,var(--accent),#4f46e5);border:0;font-weight:700}
+  button.primary:disabled{opacity:.5;cursor:not-allowed}
+  button.ghost{background:transparent}
+  main{padding:16px;max-width:1560px;margin:auto}
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px}
+  @media(max-width:1080px){.cols{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+  .card h3{margin:0 0 10px;font-size:15px;color:var(--dim);font-weight:600}
+  textarea,input[type=text],input[type=password],input[type=number],select{
+    width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px;line-height:1.9}
+  textarea{min-height:96px;resize:vertical}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .hint{font-size:12px;color:var(--dim);line-height:1.9}
+  .err{color:var(--err);font-size:13px}
+  .ok{color:var(--ok)} .warn{color:var(--warn)}
+  /* ── گفتگوی کارگزار */
+  .chat{display:flex;flex-direction:column;gap:10px;max-height:none}
+  .bubble{border:1px solid var(--line);border-radius:14px;padding:11px 13px;background:var(--card)}
+  .bubble.me{background:#1d2750;border-color:#3b4790;margin-right:36px}
+  .bubble.step{background:var(--card2)}
+  .bubble .meta{font-size:12px;color:var(--dim);margin-bottom:6px}
+  .bubble pre{white-space:pre-wrap;word-break:break-word;margin:0;font-family:inherit;line-height:2}
+  .out{line-height:2.05}
+  .out h1,.out h2,.out h3{margin:16px 0 8px;line-height:1.6}
+  .out code{background:#080d1f;padding:2px 6px;border-radius:6px;direction:ltr;display:inline-block}
+  .out pre{background:#080d1f;border:1px solid var(--line);border-radius:12px;padding:12px;overflow:auto;direction:ltr;text-align:left}
+  .tool{font-size:12.5px;background:#080d1f;border:1px dashed #2f3a66;border-radius:10px;padding:8px 10px;margin:6px 0;
+        direction:ltr;text-align:left;color:#b9c4f0;white-space:pre-wrap;max-height:210px;overflow:auto}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--dim);flex:0 0 auto}
+  .dot.run{background:var(--accent2);animation:p 1s infinite}
+  .dot.done{background:var(--ok)} .dot.failed{background:var(--err)}
+  @keyframes p{50%{opacity:.25}}
+  /* ── فایل‌ها */
+  .files{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto}
+  .file{display:flex;align-items:center;gap:8px;font-size:13px;background:var(--bg2);border:1px solid var(--line);
+        border-radius:10px;padding:7px 10px}
+  .file .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left}
+  .file .s{color:var(--dim);font-size:12px}
+  .thumb{width:100%;border-radius:12px;border:1px solid var(--line);margin-top:8px}
+  .pill{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--dim);margin:2px}
+  .pill b{color:var(--txt)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  @media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}}
+  .stage{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden}
+  .stage .head{display:flex;gap:8px;align-items:center;padding:9px 11px;background:var(--card2);cursor:pointer}
+  .stage .body{padding:10px;display:none;border-top:1px solid var(--line);max-height:420px;overflow:auto}
+  .stage.open .body{display:block}
+  .panel-hidden{display:none!important}
+  footer{color:var(--dim);font-size:12px;text-align:center;padding:16px}
+  .kbd{font-size:11px;border:1px solid var(--line);border-radius:6px;padding:1px 5px;color:var(--dim)}
+  .rec{background:#3b0d0d;border-color:#a33;animation:p 1s infinite}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 48 48"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+      <path d="M24 3l6 12 13 2-9 9 2 13-12-6-12 6 2-13-9-9 13-2z" fill="url(#g)"/>
+      <circle cx="24" cy="24" r="4.5" fill="#080c1a"/></svg>
+    <span>MEGA-AI</span><span class="badge">کارگزار مطلق</span>
+  </div>
+  <span id="statusBadge" class="badge demo">در حال بررسی…</span>
+  <div class="grow"></div>
+  <nav id="nav">
+    <button data-tab="agent" class="on">🤖 کارگزار</button>
+    <button data-tab="council">🧠 پنل خبرگان</button>
+    <button data-tab="studio">🎬 استودیو</button>
+    <button data-tab="voice">🎙 صدا</button>
+    <button data-tab="skills">🧩 مهارت‌ها</button>
+    <button data-tab="telegram">📨 تلگرام</button>
+    <button data-tab="keys">🔑 کلیدها</button>
+  </nav>
+</header>
+
+<main>
+<!-- ══════════════ کارگزار ══════════════ -->
+<section id="tab-agent">
+  <div class="cols">
+    <div>
+      <div class="card">
+        <div class="row" style="margin-bottom:8px">
+          <h3 style="margin:0">🤖 کارگزار مطلق — بگو چه کار کنم</h3><div class="grow"></div>
+          <label class="hint"><input type="checkbox" id="agentRemember" checked> به‌خاطر بسپار</label>
+          <button class="ghost" id="agentNew">🆕 نشست تازه</button>
+        </div>
+        <textarea id="goal" placeholder="مثال‌ها:  • یک تبلیغ ویدیویی ۳۰ ثانیه‌ای برای یک فروشگاه لباس بساز  • یک سایت معرفی خدمات بساز، اجرا کن و تست بگیر  • این عدد را تحلیل کن: میانگین رشد ۵ سال  • یک ربات تلگرام برای سفارش قهوه بنویس و تست کن  • پکیج‌ها را به‌روز کن و یک پروژه‌ی FastAPI بساز"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="primary" id="agentRun">🚀 اجرا کن</button>
+          <button class="ghost" id="agentStop" disabled>⏹ توقف</button>
+          <button class="ghost" id="micBtn" title="با صدا بگو">🎙 گفتن</button>
+          <div class="grow"></div>
+          <span class="hint" id="agentStatus"></span>
+        </div>
+      </div>
+      <div class="chat" id="agentChat" style="margin-top:14px"></div>
+    </div>
+    <aside style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <h3>📦 فایل‌های ساخته‌شده</h3>
+        <div class="files" id="fileList"><span class="hint">هنوز فایلی ساخته نشده.</span></div>
+        <button class="ghost" id="refreshFiles" style="margin-top:10px">↻ بازخوانی</button>
+      </div>
+      <div class="card">
+        <h3>🗺 نقشه‌ی اجرا</h3>
+        <div id="agentPlan" class="hint">با اجرای اولین کار اینجا پر می‌شود.</div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ══════════════ پنل خبرگان ══════════════ -->
+<section id="tab-council" class="panel-hidden">
+  <div class="cols">
+    <div>
+      <div class="card">
+        <div class="row" style="margin-bottom:8px">
+          <div class="modes" id="modes" style="display:flex;gap:6px;background:var(--bg2);padding:4px;border-radius:12px;border:1px solid var(--line)">
+            <button data-mode="fast" class="ghost">⚡ سریع</button>
+            <button data-mode="panel" class="primary">🧠 پنل</button>
+            <button data-mode="deep" class="ghost">🔬 عمیق</button>
+            <button data-mode="all" class="ghost">🌐 همه</button>
+          </div>
+          <div class="grow"></div>
+          <span class="hint">چند مدل مستقل جواب می‌دهند، هم را نقد می‌کنند و داور جمع‌بندی می‌کند</span>
+        </div>
+        <textarea id="prompt" placeholder="هر پرسشی… (این حالت برای پاسخ‌های دقیق، تحلیل و تصمیم‌گیری است)"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="primary" id="send">🚀 اجرا کن</button>
+          <button class="ghost" id="stop" disabled>⏹ توقف</button>
+          <div class="grow"></div><span class="hint" id="elapsed"></span>
+        </div>
+      </div>
+      <div id="timeline" style="margin-top:14px"></div>
+      <div class="card" style="margin-top:14px">
+        <div class="row"><h3 style="margin:0">🏁 پاسخ نهایی</h3><div class="grow"></div>
+          <button class="ghost" id="copyFinal">📋 کپی</button></div>
+        <div class="out" id="final"><span class="hint">پاسخ نهایی اینجا می‌آید.</span></div>
+        <div id="finalMeta" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <aside style="display:flex;flex-direction:column;gap:14px">
+      <div class="card"><h3>🧠 پنل این اجرا</h3><div id="council" class="hint">هنوز اجرایی شروع نشده.</div></div>
+      <div class="card"><h3>🏆 جدول اعتماد مدل‌ها</h3><div class="rank hint" id="rank">با هر اجرا یاد می‌گیرد کدام مدل بهتر بوده.</div></div>
+    </aside>
+  </div>
+</section>
+
+<!-- ══════════════ استودیو ══════════════ -->
+<section id="tab-studio" class="panel-hidden">
+  <div class="cols">
+    <div>
+      <div class="card">
+        <h3>🎬 ساخت تبلیغ ویدیویی</h3>
+        <div class="grid2">
+          <div><label class="hint">موضوع/محصول</label><input type="text" id="adTopic" placeholder="قهوه‌ی تازه‌دم کافه"></div>
+          <div><label class="hint">برند</label><input type="text" id="adBrand" placeholder="کافه‌ی ماه"></div>
+          <div><label class="hint">نسبت تصویر</label><select id="adRatio">
+            <option value="9:16">عمودی ۹:۱۶ (استوری/ریلز)</option><option value="16:9">افقی ۱۶:۹ (یوتیوب)</option>
+            <option value="1:1">مربع (پست)</option></select></div>
+          <div><label class="hint">صدا</label><select id="adVoice"></select></div>
+          <div><label class="hint">تم رنگی</label><select id="adTheme"></select></div>
+          <div class="row" style="align-items:flex-end"><label class="hint"><input type="checkbox" id="adMusic" checked> موسیقی پس‌زمینه</label></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="primary" id="adRun">🎬 بساز</button><span class="hint" id="adStatus"></span>
+        </div>
+        <div id="adResult"></div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3>🖼 ساخت پوستر / اسلاید</h3>
+        <div class="grid3">
+          <div><label class="hint">عنوان</label><input type="text" id="imgTitle" placeholder="پیشنهاد ویژه"></div>
+          <div><label class="hint">زیرعنوان</label><input type="text" id="imgSub" placeholder="۳۰٪ تخفیف تا پایان هفته"></div>
+          <div><label class="hint">برچسب</label><input type="text" id="imgBadge" placeholder="امروز"></div>
+          <div><label class="hint">تم</label><select id="imgTheme"></select></div>
+          <div><label class="hint">نسبت</label><select id="imgRatio"><option value="9:16">عمودی</option>
+            <option value="1:1">مربع</option><option value="16:9">افقی</option></select></div>
+          <div><label class="hint">پاصفحه</label><input type="text" id="imgFooter" placeholder="آدرس سایت شما"></div>
+        </div>
+        <label class="hint">فهرست نکات (هر خط یک مورد)</label>
+        <textarea id="imgLines" style="min-height:70px" placeholder="ارسال رایگان&#10;پشتیبانی ۲۴ ساعته"></textarea>
+        <div class="row" style="margin-top:10px"><button class="primary" id="imgRun">🖼 بساز</button>
+          <span class="hint" id="imgStatus"></span></div>
+        <div id="imgResult"></div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3>🎞 ویدیو از صحنه‌های دلخواه</h3>
+        <p class="hint">هر صحنه یک خط: <code>عنوان | متن گویندگی | نکته۱, نکته۲ | تم</code> — یک صحنه در هر خط.</p>
+        <textarea id="scenesBox" style="min-height:120px;direction:rtl" placeholder="معرفی محصول | این محصول کارت را راه می‌اندازد | سریع, ارزان | بنفش شب&#10;نتیجه | در چند دقیقه آماده است | ,  | اقیانوس"></textarea>
+        <div class="row" style="margin-top:8px">
+          <select id="vidRatio"><option value="9:16">عمودی</option><option value="16:9">افقی</option></select>
+          <select id="vidVoice"></select>
+          <label class="hint"><input type="checkbox" id="vidSubs" checked> زیرنویس</label>
+          <label class="hint"><input type="checkbox" id="vidMotion" checked> حرکت نرم</label>
+          <button class="primary" id="vidRun">🎞 بساز</button><span class="hint" id="vidStatus"></span>
+        </div>
+        <div id="vidResult"></div>
+      </div>
+    </div>
+    <aside class="card">
+      <h3>📁 خروجی‌های استودیو</h3>
+      <div class="files" id="studioFiles"><span class="hint">هنوز چیزی ساخته نشده.</span></div>
+      <button class="ghost" id="refreshStudio" style="margin-top:10px">↻ بازخوانی</button>
+    </aside>
+  </div>
+</section>
+
+<!-- ══════════════ صدا ══════════════ -->
+<section id="tab-voice" class="panel-hidden">
+  <div class="cols">
+    <div class="card">
+      <h3>🔊 متن → گفتار</h3>
+      <textarea id="ttsText" placeholder="متنی که می‌خواهی خوانده شود…"></textarea>
+      <div class="row" style="margin-top:8px">
+        <select id="ttsVoice" style="max-width:260px"></select>
+        <button class="primary" id="ttsRun">🔊 بساز</button><span class="hint" id="ttsStatus"></span>
+      </div>
+      <div id="ttsResult"></div>
+    </div>
+    <div class="card">
+      <h3>🎤 گفتار → متن</h3>
+      <input type="file" id="sttFile" accept="audio/*">
+      <div class="row" style="margin-top:8px"><button class="primary" id="sttRun">🎤 تبدیل کن</button>
+        <span class="hint" id="sttStatus"></span></div>
+      <div id="sttResult" class="out"></div>
+      <p class="hint" style="margin-top:12px">برای دقت بالا کلید OpenAI (Whisper) بده؛ بدون آن از مدل محلی استفاده می‌شود (اگر نصب باشد).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ مهارت‌ها ══════════════ -->
+<section id="tab-skills" class="panel-hidden">
+  <div class="cols">
+    <div class="card">
+      <h3>🧩 نصب مهارت / پکیج / مخزن</h3>
+      <input type="text" id="skillSource" placeholder="نام پکیج pip، یا آدرس فایل .py، یا لینک مخزن git">
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="skillName" placeholder="نام مهارت (اختیاری)" style="max-width:240px">
+        <button class="primary" id="skillInstall">⬇️ نصب کن</button>
+        <button class="ghost" id="skillUpdate">♻️ به‌روزرسانی کتابخانه‌ها</button>
+      </div>
+      <pre id="skillOut" class="tool" style="margin-top:10px;max-height:340px">—</pre>
+    </div>
+    <aside class="card">
+      <h3>📚 مهارت‌های نصب‌شده (skills/)</h3>
+      <div class="files" id="skillList"><span class="hint">خالی است.</span></div>
+      <p class="hint" style="margin-top:10px">هر فایل پایتون در پوشه‌ی <code>skills/</code> یک مهارت است و می‌تواند به کارگزار وصل شود.</p>
+    </aside>
+  </div>
+</section>
+
+<!-- ══════════════ تلگرام ══════════════ -->
+<section id="tab-telegram" class="panel-hidden">
+  <div class="cols">
+    <div class="card">
+      <h3>📨 دستیار تلگرام</h3>
+      <p class="hint">توکن ربات را از <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> بگیر و اینجا بگذار.
+        بعد از فعال شدن، هر پیام/صدا/فایلی که به ربات بدهی توسط کارگزار اجرا می‌شود و خروجی (متن، ویدیو، تصویر، فایل) برایت برمی‌گردد.</p>
+      <input type="password" id="tgToken" placeholder="123456:ABC-DEF…">
+      <div class="row" style="margin-top:8px">
+        <button class="primary" id="tgStart">▶️ فعال کن</button>
+        <button class="ghost" id="tgStop">⏹ خاموش کن</button>
+        <span class="hint" id="tgStatus"></span>
+      </div>
+      <div id="tgInfo" style="margin-top:12px"></div>
+    </div>
+    <aside class="card">
+      <h3>💡 چه کارهایی از تلگرام می‌شود</h3>
+      <ul class="hint" style="line-height:2.1;padding-right:18px">
+        <li>«یک تبلیغ برای محصولم بساز» → ویدیو برایت می‌فرستد</li>
+        <li>🎙 پیام صوتی بفرست → متن و اجرا</li>
+        <li>📎 فایل داده بفرست → تحلیل + نمودار</li>
+        <li><code>/say متن</code> → پاسخ صوتی</li>
+        <li><code>/status</code> وضعیت، <code>/new</code> نشست تازه</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ══════════════ کلیدها ══════════════ -->
+<section id="tab-keys" class="panel-hidden">
+  <div class="cols">
+    <div class="card keys" id="keysCard">
+      <h3>🔑 کلیدهای API</h3>
+      <p class="hint">هر پرووایدری کلید داشته باشد خودکار وارد سیستم می‌شود. ساده‌ترین راه: یک کلید OpenRouter (با یک کلید به GPT، Claude، Gemini، Grok، DeepSeek، Qwen و Llama دسترسی داری).</p>
+      <div id="providers"></div>
+    </div>
+    <aside style="display:flex;flex-direction:column;gap:14px">
+      <div class="card"><h3>⚙️ تنظیمات اجرا</h3><div id="settings"></div></div>
+      <div class="card"><h3>📊 وضعیت سیستم</h3><div id="sysStats" class="hint"></div></div>
+    </aside>
+  </div>
+</section>
+
+<footer>MEGA-AI — کارگزار مطلق · پنل خبرگان · استودیوی محتوا · صدا · مهارت‌ها · تلگرام — همه چیز روی همین سرور خودت اجرا می‌شود</footer>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const esc = s => (s??"").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let AGENT_CTRL=null, COUNCIL_CTRL=null, MODE="panel", T0=0, TIMER=null;
+let SESSION = localStorage.getItem("mega.agent.session") || "", CSESSION = localStorage.getItem("mega.session") || "";
+let OPTIONS = {themes:[], voices:{}, presets:[]};
+
+/* ── markdown سبک */
+function md(src){
+  let t = esc(src||""); const blocks=[];
+  t = t.replace(/```(\w*)\n?([\s\S]*?)```/g,(m,l,c)=>{blocks.push(`<pre><code>${c}</code></pre>`);return `\u0000${blocks.length-1}\u0000`;});
+  t = t.replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>");
+  t = t.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/`([^`\n]+)`/g,"<code>$1</code>");
+  t = t.replace(/^\s*[-*] (.*)$/gm,"• $1");
+  t = t.replace(/\n{2,}/g,"</p><p>").replace(/\n/g,"<br>"); t = `<p>${t}</p>`;
+  blocks.forEach((b,i)=> t = t.replace(new RegExp(`<p>?\u0000${i}\u0000</p>?`), b));
+  return t;
+}
+function fmtSize(b){ return b>1048576? (b/1048576).toFixed(1)+" MB" : Math.max(1,Math.round(b/1024))+" KB"; }
+function fileIcon(name){
+  const e = (name.split(".").pop()||"").toLowerCase();
+  return {mp4:"🎬",webm:"🎬",mp3:"🔊",wav:"🔊",ogg:"🔊",png:"🖼",jpg:"🖼",jpeg:"🖼",webp:"🖼",
+          csv:"📊",xlsx:"📊",json:"🧾",py:"🐍",html:"🌐",js:"🌐",css:"🌐",dart:"📱",md:"📝",txt:"📝",
+          pdf:"📄",zip:"🗜"}[e] || "📄";
+}
+
+/* ── تب‌ها */
+$$("#nav button").forEach(b=> b.onclick = ()=>{
+  $$("#nav button").forEach(x=>x.classList.remove("on")); b.classList.add("on");
+  ["agent","council","studio","voice","skills","telegram","keys"].forEach(t=>
+    $("#tab-"+t).classList.toggle("panel-hidden", t!==b.dataset.tab));
+  if (b.dataset.tab==="keys") loadHealth();
+  if (b.dataset.tab==="skills") loadSkills();
+  if (b.dataset.tab==="telegram") tgStatus();
+});
+
+/* ═══════════ سلامت، کلیدها، تنظیمات ═══════════ */
+async function loadHealth(){
+  try{
+    const d = await (await fetch("/api/health")).json();
+    const b = $("#statusBadge");
+    if(d.demo && d.demo_model){ b.className="badge demo"; b.textContent="حالت نمایشی — کلید API بده تا مدل‌های واقعی وصل شوند"; }
+    else if(d.demo){ b.className="badge demo"; b.textContent="کلیدی فعال نیست"; }
+    else { b.className="badge good"; b.textContent=`فعال: ${d.active.join(" · ")}`; }
+    const box = $("#providers"); box.innerHTML="";
+    Object.entries(d.providers||{}).forEach(([id,p])=>{
+      box.insertAdjacentHTML("beforeend", `<label class="hint">${esc(p.label)} ${p.configured?"✅":"—"}</label>
+        <input type="password" data-k="${esc(p.env_key)}" placeholder="${esc(p.env_key)}">
+        ${p.signup?`<div class="hint">کلید: <a href="${esc(p.signup)}" target="_blank" rel="noopener">${esc(p.signup)}</a></div>`:""}`);
+    });
+    box.insertAdjacentHTML("beforeend", `<div class="row" style="margin-top:12px">
+      <button class="primary" id="saveKeys">💾 ذخیره‌ی کلیدها</button>
+      <span class="hint">فقط در فایل .env روی همین سرور ذخیره می‌شود</span></div>
+      <input type="password" id="tgTokInline" placeholder="TELEGRAM_BOT_TOKEN (اختیاری)" style="margin-top:10px">
+      <button class="ghost" id="saveTg" style="margin-top:6px">ذخیره‌ی توکن تلگرام</button>`);
+    $("#saveKeys").onclick = async ()=>{
+      const payload={};
+      box.querySelectorAll("input[data-k]").forEach(i=>{ if(i.value.trim()) payload[i.dataset.k]=i.value.trim(); });
+      const tg = $("#tgTokInline").value.trim(); if(tg) payload.TELEGRAM_BOT_TOKEN=tg;
+      if(!Object.keys(payload).length){ alert("چیزی وارد نشده."); return; }
+      const r = await (await fetch("/api/keys",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)})).json();
+      alert("ذخیره شد ✅\nپرووایدرهای فعال: "+(r.active.join(", ")||"هیچ")); loadHealth();
+    };
+    $("#saveTg").onclick = async ()=>{
+      const tg = $("#tgTokInline").value.trim(); if(!tg){alert("توکن را وارد کن.");return;}
+      await fetch("/api/keys",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({TELEGRAM_BOT_TOKEN:tg})});
+      alert("ذخیره شد ✅"); tgStatus();
+    };
+    const s = d.settings||{};
+    $("#settings").innerHTML = `
+      <label class="hint">تعداد خبره‌ها: <b>${s.panel_size}</b></label>
+      <input type="range" min="2" max="8" value="${s.panel_size}" id="setPanel" style="width:100%">
+      <label class="hint">حداکثر گام کارگزار: <b>${s.agent_max_steps}</b> (۰ = بی‌نهایت)</label>
+      <input type="range" min="0" max="60" step="3" value="${s.agent_max_steps}" id="setSteps" style="width:100%">
+      <label class="hint"><input type="checkbox" id="setTools" ${s.use_tools?"checked":""}> ابزارها فعال</label>
+      <label class="hint"><input type="checkbox" id="setVerify" ${s.verify?"checked":""}> بازبینی نهایی</label>
+      <button class="ghost" id="saveSettings" style="margin-top:8px">ذخیره‌ی تنظیمات</button>`;
+    $("#saveSettings").onclick = async ()=>{
+      await fetch("/api/settings",{method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({panel_size:+$("#setPanel").value, agent_max_steps:+$("#setSteps").value,
+                             use_tools:$("#setTools").checked, verify:$("#setVerify").checked})});
+      alert("ذخیره شد ✅");
+    };
+    $("#sysStats").innerHTML = `اجراها: <b>${d.stats.runs}</b> · پاسخ مدل‌ها: <b>${d.stats.stages}</b> · مدل‌ها: <b>${d.stats.models}</b>`;
+  }catch(e){ $("#statusBadge").textContent="سرور در دسترس نیست"; }
+}
+
+/* ═══════════ کارگزار ═══════════ */
+$("#agentNew").onclick = ()=>{ SESSION=""; localStorage.removeItem("mega.agent.session"); $("#agentChat").innerHTML=""; alert("نشست تازه ✅"); };
+$("#agentRun").onclick = runAgent;
+$("#agentStop").onclick = ()=>{ if(AGENT_CTRL) AGENT_CTRL.abort(); };
+$("#goal").addEventListener("keydown", e=>{ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)) runAgent(); });
+
+function bubble(cls, html){ const d=document.createElement("div"); d.className="bubble "+cls; d.innerHTML=html; $("#agentChat").appendChild(d); d.scrollIntoView({behavior:"smooth",block:"end"}); return d; }
+
+async function runAgent(){
+  const goal = $("#goal").value.trim();
+  if(!goal){ alert("خواسته‌ات را بنویس."); return; }
+  if(!SESSION){ SESSION="ag-"+Math.random().toString(36).slice(2,10); localStorage.setItem("mega.agent.session",SESSION); }
+  $("#goal").value=""; bubble("me", `<div class="meta">تو</div>${md(goal)}`);
+  $("#agentRun").disabled=true; $("#agentStop").disabled=false;
+  T0=Date.now(); clearInterval(TIMER);
+  TIMER=setInterval(()=> $("#agentStatus").textContent=`${((Date.now()-T0)/1000).toFixed(0)} ثانیه در حال اجرا…`,500);
+  const stepEl={}, toolCount={}; let stepNo=0;
+  AGENT_CTRL = new AbortController();
+  try{
+    const res = await fetch("/api/agent",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({goal, session_id:SESSION, mode:"agent", remember:$("#agentRemember").checked}),
+      signal:AGENT_CTRL.signal});
+    const reader=res.body.getReader(), dec=new TextDecoder(); let buf="";
+    while(true){
+      const {value,done}=await reader.read(); if(done) break;
+      buf+=dec.decode(value,{stream:true}); const parts=buf.split("\n\n"); buf=parts.pop();
+      for(const p of parts){
+        const line=p.split("\n").find(l=>l.startsWith("data: ")); if(!line) continue;
+        let ev; try{ ev=JSON.parse(line.slice(6)); }catch(e){ continue; }
+        handleAgent(ev, stepEl, toolCount);
+      }
+    }
+  }catch(e){ if(e.name!=="AbortError") bubble("step",`<div class="err">خطا: ${esc(e.message)}</div>`); }
+  clearInterval(TIMER); $("#agentStatus").textContent=""; $("#agentRun").disabled=false; $("#agentStop").disabled=true;
+  loadFiles(); loadStudioFiles();
+}
+
+function handleAgent(ev, stepEl, toolCount){
+  switch(ev.type){
+    case "model": bubble("step", `<div class="meta">مدل اجراکننده</div><b>${esc(ev.name)}</b> <span class="hint">(${esc(ev.provider)})</span>`); break;
+    case "plan": {
+      const p = ev.plan||{}; const st=(p.steps||[]);
+      $("#agentPlan").innerHTML = `<div><b>هدف:</b> ${esc(p.goal||"")}</div>` +
+        st.map(s=>`<div style="margin-top:6px"><span class="pill"><b>${esc(s.n||"•")}</b></span>
+          ${esc(s.action||"")} <span class="hint">${esc(s.tool||"")}</span></div>`).join("") +
+        ((p.deliverables||[]).length? `<div class="hint" style="margin-top:8px">تحویلی‌ها: ${esc(p.deliverables.join(" · "))}</div>`:"");
+      bubble("step",`<div class="meta">🗺 نقشه‌ی اجرا (${st.length} گام)</div>`+ md(st.map((s,i)=>`${s.n||i+1}. ${s.action||""}`).join("\n")));
+      break; }
+    case "step": {
+      stepNo = ev.n;
+      if(ev.state==="start"){
+        stepEl[ev.n] = bubble("step", `<div class="meta"><span class="dot run"></span> گام ${ev.n}</div><pre class="txt"></pre>`);
+        bubble("step", `<div class="meta">گام ${ev.n} — جزئیات اجرا</div><pre class="detail"></pre>`);
+      }
+      if(ev.state==="done"){ const el=stepEl[ev.n]; if(el) el.querySelector(".dot").className="dot done"; }
+      break; }
+    case "thought": {
+      const b = [...$$("#agentChat .bubble")].reverse().find(x=>x.querySelector(".detail"));
+      if(b) b.querySelector(".detail").innerHTML = md(ev.text).replace(/^<p>|<\/p>$/g,"");
+      break; }
+    case "delta": {
+      const el = stepEl[ev.n]; if(!el) break;
+      const pre = el.querySelector(".txt"); pre.dataset.raw=(pre.dataset.raw||"")+ev.text; pre.textContent=pre.dataset.raw;
+      break; }
+    case "tool": {
+      toolCount[ev.n]=(toolCount[ev.n]||0)+1;
+      const b = stepEl[ev.n] || bubble("step", `<div class="meta">گام ${ev.n}</div><pre></pre>`);
+      b.insertAdjacentHTML("beforeend", `<div class="tool">🔧 <b>${esc(ev.name)}</b>
+        ${esc(JSON.stringify(ev.args||{}).slice(0,700))}</div>`);
+      break; }
+    case "tool_result": {
+      const b = stepEl[ev.n] || stepEl[Object.keys(stepEl).pop()];
+      if(b) b.insertAdjacentHTML("beforeend", `<div class="tool">↳ ${esc(String(ev.result||"").slice(0,1600))}</div>`);
+      break; }
+    case "artifact": {
+      const icon = fileIcon(ev.path);
+      bubble("step", `<div class="meta">📦 فایل ساخته شد</div>${icon} <a href="${ev.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(ev.path))}" target="_blank">${esc(ev.name||ev.path)}</a>
+        <span class="hint">(${fmtSize(ev.size)})</span>`);
+      loadFiles(); break; }
+    case "error": bubble("step", `<div class="err">⚠️ ${esc(ev.message)}</div>`); break;
+    case "final": {
+      bubble("step", `<div class="meta">✅ نتیجه — ${ev.steps} گام · ${ev.seconds} ثانیه · مدل ${esc(ev.model||"")}</div>` + md(ev.text));
+      break; }
+  }
+}
+
+/* ── فایل‌ها */
+async function loadFiles(){
+  try{
+    const d = await (await fetch("/api/artifacts"+(SESSION?`?session=${encodeURIComponent(SESSION)}`:""))).json();
+    const items = d.items||[];
+    $("#fileList").innerHTML = items.length? items.slice(0,60).map(f=>`
+      <div class="file">${fileIcon(f.name)}<span class="n"><a href="${f.url}" target="_blank">${esc(f.path)}</a></span>
+      <span class="s">${fmtSize(f.size)}</span></div>`).join("") : `<span class="hint">هنوز فایلی ساخته نشده.</span>`;
+  }catch(e){}
+}
+$("#refreshFiles").onclick = loadFiles;
+
+/* ═══════════ پنل خبرگان ═══════════ */
+$$("#modes button").forEach(b=> b.onclick=()=>{ $$("#modes button").forEach(x=>{x.classList.remove("primary");x.classList.add("ghost");}); b.classList.add("primary"); b.classList.remove("ghost"); MODE=b.dataset.mode; });
+$("#send").onclick = runCouncil; $("#stop").onclick = ()=>{ if(COUNCIL_CTRL) COUNCIL_CTRL.abort(); };
+$("#copyFinal").onclick = ()=>{ navigator.clipboard.writeText($("#final").innerText); };
+
+function stageEl(id, role, title, model, provider){
+  let el=document.getElementById("st-"+id); if(el) return el;
+  const icon={router:"🧭",scout:"🌐",expert:"🧠",critic:"🔍",judge:"⚖️",verifier:"✅"}[role]||"•";
+  el=document.createElement("div"); el.className="stage"; el.id="st-"+id;
+  el.innerHTML=`<div class="head"><span class="dot run"></span><span>${icon}</span>
+     <span style="flex:1">${esc(title||"")}</span>
+     <span class="hint m" style="direction:ltr">${esc(model||"")}</span><span class="hint">▾</span></div>
+     <div class="body"><pre style="white-space:pre-wrap;font-family:inherit"> </pre></div>`;
+  el.querySelector(".head").onclick=()=>el.classList.toggle("open");
+  $("#timeline").appendChild(el); return el;
+}
+async function runCouncil(){
+  const prompt=$("#prompt").value.trim(); if(!prompt){alert("پرسش را بنویس.");return;}
+  if(!CSESSION){ CSESSION="s-"+Math.random().toString(36).slice(2,10); localStorage.setItem("mega.session",CSESSION); }
+  $("#timeline").innerHTML=""; $("#council").innerHTML="در حال انتخاب خبرگان…"; $("#final").innerHTML="در حال کار…"; $("#finalMeta").innerHTML="";
+  $("#send").disabled=true; $("#stop").disabled=false;
+  T0=Date.now(); clearInterval(TIMER); TIMER=setInterval(()=> $("#elapsed").textContent=((Date.now()-T0)/1000).toFixed(0)+" ثانیه",500);
+  COUNCIL_CTRL=new AbortController();
+  let finalText="";
+  try{
+    const res=await fetch("/api/run",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({prompt,session_id:CSESSION,mode:MODE,remember:true}),signal:COUNCIL_CTRL.signal});
+    const reader=res.body.getReader(),dec=new TextDecoder();let buf="";
+    while(true){ const {value,done}=await reader.read(); if(done)break;
+      buf+=dec.decode(value,{stream:true}); const parts=buf.split("\n\n"); buf=parts.pop();
+      for(const p of parts){ const line=p.split("\n").find(l=>l.startsWith("data: ")); if(!line)continue;
+        let ev; try{ev=JSON.parse(line.slice(6));}catch(e){continue;} handleCouncil(ev); if(ev.type==="final") finalText=ev.text; } }
+  }catch(e){ if(e.name!=="AbortError") $("#final").innerHTML+=`<div class="err">${esc(e.message)}</div>`; }
+  clearInterval(TIMER); $("#send").disabled=false; $("#stop").disabled=true;
+  if(finalText) sessionStorage.setItem("mega.lastFinal",finalText);
+  loadRank();
+}
+function handleCouncil(ev){
+  switch(ev.type){
+    case "stage": if(ev.state==="start"){ const el=stageEl(ev.id,ev.role,ev.title,ev.model,ev.provider); el.classList.add("open"); } break;
+    case "delta": { const el=document.getElementById("st-"+ev.id); if(!el)break;
+      const pre=el.querySelector("pre"); pre.dataset.raw=(pre.dataset.raw||"")+ev.text; pre.textContent=pre.dataset.raw; break; }
+    case "stage_end": { const el=document.getElementById("st-"+ev.id); if(!el)break;
+      el.querySelector(".dot").className="dot "+(ev.state==="failed"?"failed":"done");
+      if(ev.text) el.querySelector("pre").innerHTML=md(ev.text); break; }
+    case "tool": { const el=stageEl(ev.id,"expert","","",""); el.classList.add("open");
+      el.querySelector(".body").insertAdjacentHTML("beforeend",`<div class="tool">🔧 ${esc(ev.name)} ${esc(JSON.stringify(ev.args||{}).slice(0,300))}</div>`); break; }
+    case "panel": $("#council").innerHTML=(ev.models||[]).map((m,i)=>`<div class="file"><b>${i+1}</b><span class="n">${esc(m.name)}</span><span class="s">${esc(m.provider)}</span></div>`).join("")||"—"; break;
+    case "final": {
+      $("#final").innerHTML=md(ev.text);
+      $("#finalMeta").innerHTML=`<div class="hint">⏱ ${ev.seconds}s · 🧠 ${(ev.panel||[]).length} خبره · ${esc(ev.tokens||0)} توکن</div>
+        <div>${(ev.panel||[]).map(p=>`<span class="pill"><b>${esc(p.name)}</b> ${p.seconds}s</span>`).join("")}</div>`; break; }
+    case "error": $("#final").innerHTML+=`<div class="err">${esc(ev.message)}</div>`; break;
+  }
+}
+async function loadRank(){
+  try{ const d=await (await fetch("/api/leaderboard")).json();
+    $("#rank").innerHTML=(d.rows||[]).slice(0,10).map(x=>`<div><span class="pill"><b>${x.avg}</b></span>
+      ${esc((x.model||"").split("/").pop())} <span class="hint">(${esc(x.task_type)})</span></div>`).join("")||"هنوز داده‌ای نیست."; }catch(e){}
+}
+
+/* ═══════════ استودیو ═══════════ */
+async function loadOptions(){
+  const d=await (await fetch("/api/media/options")).json(); OPTIONS=d;
+  const themeOpts=(d.themes||[]).map(t=>`<option>${esc(t)}</option>`).join("");
+  const voiceOpts=Object.entries(d.voices||{}).map(([k,v])=>`<option value="${v}">${esc(k)}</option>`).join("");
+  ["#adTheme","#imgTheme"].forEach(s=>$(s).innerHTML=themeOpts);
+  ["#adVoice","#vidVoice","#ttsVoice"].forEach(s=>$(s).innerHTML=voiceOpts);
+}
+$("#adRun").onclick = async ()=>{
+  const body={kind:"ad", topic:$("#adTopic").value.trim()||"محصول تو", brand:$("#adBrand").value.trim(),
+    ratio:$("#adRatio").value, voice:$("#adVoice").value, theme:$("#adTheme").value, music:$("#adMusic").checked,
+    session_id: SESSION||undefined};
+  $("#adStatus").textContent="⏳ در حال ساخت تبلیغ (چند صحنه، صداگذاری، تدوین)…"; $("#adRun").disabled=true;
+  try{
+    const d=await (await fetch("/api/media/video",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)})).json();
+    $("#adStatus").textContent = d.ok? `✅ آماده شد — ${d.seconds} ثانیه، ${d.scenes} صحنه` : "⚠️ "+(d.error||"خطا");
+    $("#adResult").innerHTML = d.ok? `<video class="thumb" src="${d.url}" controls></video>
+      <div class="row" style="margin-top:8px"><a href="${d.url}" target="_blank"><button>⬇️ دانلود</button></a>
+      <span class="hint">${esc(d.url)}</span></div>` : "";
+  }catch(e){ $("#adStatus").textContent="خطا: "+e.message; }
+  $("#adRun").disabled=false; loadStudioFiles();
+};
+$("#imgRun").onclick = async ()=>{
+  const lines=$("#imgLines").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  const body={title:$("#imgTitle").value.trim()||"پیشنهاد ویژه", subtitle:$("#imgSub").value.trim(), lines,
+    badge:$("#imgBadge").value.trim(), theme:$("#imgTheme").value, ratio:$("#imgRatio").value,
+    footer:$("#imgFooter").value.trim(), session_id:SESSION||undefined};
+  $("#imgStatus").textContent="⏳…"; 
+  const d=await (await fetch("/api/media/image",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)})).json();
+  $("#imgStatus").textContent=d.ok?"✅ آماده":"⚠️";
+  $("#imgResult").innerHTML=d.ok?`<img class="thumb" src="${d.url}"><div class="row" style="margin-top:8px">
+    <a href="${d.url}" target="_blank"><button>⬇️ دانلود</button></a></div>`:"";
+  loadStudioFiles();
+};
+$("#vidRun").onclick = async ()=>{
+  const rows=$("#scenesBox").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  if(!rows.length){ alert("حداقل یک صحنه بنویس."); return; }
+  const scenes=rows.map(r=>{ const [title,text,lines,theme]=r.split("|").map(x=>(x||"").trim());
+    return {title, text, lines: lines? lines.split(",").map(s=>s.trim()).filter(Boolean):[], theme: theme||"بنفش شب"}; });
+  $("#vidStatus").textContent="⏳ در حال ساخت…"; $("#vidRun").disabled=true;
+  const d=await (await fetch("/api/media/video",{method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({kind:"video", scenes, ratio:$("#vidRatio").value, voice:$("#vidVoice").value,
+      subtitles:$("#vidSubs").checked, motion:$("#vidMotion").checked, session_id:SESSION||undefined})})).json();
+  $("#vidStatus").textContent=d.ok?`✅ ${d.seconds} ثانیه`:"⚠️ "+(d.error||"");
+  $("#vidResult").innerHTML=d.ok?`<video class="thumb" src="${d.url}" controls></video>`:"";
+  $("#vidRun").disabled=false; loadStudioFiles();
+};
+async function loadStudioFiles(){
+  try{ const d=await (await fetch("/api/artifacts"+((SESSION)?`?session=${encodeURIComponent(SESSION)}`:""))).json();
+    const items=(d.items||[]).filter(f=>/\.(mp4|png|jpe?g|mp3|wav)$/i.test(f.name)).slice(0,40);
+    $("#studioFiles").innerHTML = items.length? items.map(f=>`<div class="file">${fileIcon(f.name)}
+      <span class="n"><a href="${f.url}" target="_blank">${esc(f.name)}</a></span><span class="s">${fmtSize(f.size)}</span></div>`).join("")
+      : `<span class="hint">هنوز چیزی ساخته نشده.</span>`; }catch(e){}
+}
+$("#refreshStudio").onclick=loadStudioFiles;
+
+/* ═══════════ صدا ═══════════ */
+$("#ttsRun").onclick = async ()=>{
+  const text=$("#ttsText").value.trim(); if(!text){alert("متن را بنویس.");return;}
+  $("#ttsStatus").textContent="⏳…";
+  const d=await (await fetch("/api/voice/tts",{method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({text, voice:$("#ttsVoice").value})})).json();
+  $("#ttsStatus").textContent=d.ok?`✅ ${d.seconds||""} ثانیه (${d.engine||""})`:"⚠️ "+(d.error||"");
+  $("#ttsResult").innerHTML=d.ok?`<audio class="thumb" style="margin-top:8px" src="${d.url}" controls></audio>
+    <div class="row" style="margin-top:6px"><a href="${d.url}" target="_blank"><button>⬇️ دانلود</button></a></div>`:"";
+  loadStudioFiles();
+};
+$("#sttRun").onclick = async ()=>{
+  const f=$("#sttFile").files[0]; if(!f){alert("فایل صوتی انتخاب کن.");return;}
+  const fd=new FormData(); fd.append("file",f);
+  $("#sttStatus").textContent="⏳ در حال تبدیل…";
+  const d=await (await fetch("/api/voice/stt",{method:"POST",body:fd})).json();
+  $("#sttStatus").textContent=d.ok?`✅ (${d.engine||""})`:"⚠️ "+(d.error||"");
+  $("#sttResult").innerHTML=d.ok? md(d.text):"";
+};
+
+/* ═══════════ مهارت‌ها ═══════════ */
+async function loadSkills(){
+  try{ const d=await (await fetch("/api/skills")).json();
+    $("#skillList").innerHTML=(d.skills||[]).map(s=>`<div class="file">${s.dir?"📁":"🐍"}
+      <span class="n">${esc(s.name)}</span><span class="s">${s.size?fmtSize(s.size):""}</span></div>`).join("")
+      || `<span class="hint">خالی است.</span>`; }catch(e){}
+}
+$("#skillInstall").onclick = async ()=>{
+  const source=$("#skillSource").value.trim(); if(!source){alert("نام پکیج/آدرس را بده.");return;}
+  $("#skillOut").textContent="⏳ در حال نصب…";
+  const d=await (await fetch("/api/skills",{method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({action:"install",source,name:$("#skillName").value.trim()})})).json();
+  $("#skillOut").textContent=d.output||""; loadSkills();
+};
+$("#skillUpdate").onclick = async ()=>{
+  $("#skillOut").textContent="⏳ در حال به‌روزرسانی کتابخانه‌ها…";
+  const d=await (await fetch("/api/skills",{method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({action:"update"})})).json();
+  $("#skillOut").textContent=d.output||""; loadSkills();
+};
+
+/* ═══════════ تلگرام ═══════════ */
+async function tgStatus(){
+  try{ const d=await (await fetch("/api/telegram")).json();
+    $("#tgStatus").innerHTML = d.running? `<span class="ok">فعال است</span>${d.username?` — <a href="https://t.me/${esc(d.username)}" target="_blank">@${esc(d.username)}</a>`:""}`
+      : (d.token_set? "توکن ذخیره شده ولی ربات خاموش است" : "هنوز فعال نشده");
+    if(d.stats&&d.stats.messages!=null) $("#tgInfo").innerHTML=`<div class="hint">پیام‌ها: <b>${d.stats.messages}</b> ·
+      کارهای اجراشده: <b>${d.stats.jobs}</b> · خطاها: <b>${d.stats.errors}</b></div>`;
+  }catch(e){}
+}
+$("#tgStart").onclick = async ()=>{
+  const token=$("#tgToken").value.trim();
+  $("#tgStatus").textContent="⏳ در حال فعال‌سازی…";
+  const d=await (await fetch("/api/telegram",{method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({action:"start",token})})).json();
+  if(!d.ok){ $("#tgStatus").innerHTML=`<span class="err">${esc(d.error||"خطا")}</span>`; return; }
+  $("#tgStatus").innerHTML=`<span class="ok">فعال شد</span> — <a href="https://t.me/${esc(d.username)}" target="_blank">@${esc(d.username)}</a>`;
+  tgStatus();
+};
+$("#tgStop").onclick = async ()=>{ await fetch("/api/telegram",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"stop"})}); tgStatus(); };
+
+/* ═══════════ ضبط صدا (گفتن) ═══════════ */
+$("#micBtn").onclick = async ()=>{
+  const btn=$("#micBtn");
+  if(btn.classList.contains("rec")){ btn.classList.remove("rec"); btn.textContent="🎙 گفتن"; return; }
+  let rec, chunks=[];
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    rec=new MediaRecorder(stream);
+    rec.ondataavailable=e=>chunks.push(e.data);
+    rec.onstop=async ()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:"audio/webm"});
+      const fd=new FormData(); fd.append("file",new File([blob],"voice.webm"));
+      $("#agentStatus").textContent="در حال تشخیص گفتار…";
+      try{
+        const d=await (await fetch("/api/voice/stt",{method:"POST",body:fd})).json();
+        if(d.ok){ $("#goal").value=(($("#goal").value+" "+d.text).trim()); }
+        else alert("تشخیص گفتار ممکن نشد: "+(d.error||"")+"\n(کلید OpenAI بده یا مدل محلی نصب کن)");
+      }catch(e){ alert("خطای شبکه در تشخیص گفتار"); }
+      $("#agentStatus").textContent="";
+    };
+    rec.start(); btn.classList.add("rec"); btn.textContent="⏹ توقف ضبط";
+  }catch(e){ alert("دسترسی به میکروفون ممکن نشد."); }
+};
+
+/* راه‌اندازی */
+loadHealth(); loadOptions(); loadFiles(); loadStudioFiles(); loadSkills(); tgStatus(); loadRank();
+setInterval(loadHealth, 60000);
+</script>
+</body>
+</html>

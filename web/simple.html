@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+<title>دستیار من — MEGA-AI</title>
+<style>
+  :root{
+    --bg:#f5f6fb; --card:#ffffff; --line:#e4e7f2; --txt:#161a2b; --dim:#6b7390;
+    --accent:#6d4bff; --accent2:#0ea5b7; --ok:#0f9d58; --err:#e2434b; --warn:#c98a00;
+    --radius:18px; --shadow:0 4px 24px rgba(30,35,80,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:Vazirmatn,Tahoma,system-ui,sans-serif;font-size:16px}
+  a{color:var(--accent)}
+  /* ── هدر */
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:10px;
+         position:sticky;top:0;z-index:20}
+  .brand{font-weight:800;font-size:17px;display:flex;align-items:center;gap:8px}
+  .brand .dot{width:26px;height:26px;border-radius:9px;background:linear-gradient(135deg,#6d4bff,#0ea5b7)}
+  .grow{flex:1}
+  .pill{font-size:12.5px;border-radius:999px;padding:5px 11px;border:1px solid var(--line);color:var(--dim);background:#fff}
+  .pill.ok{border-color:#bfe6cd;background:#eefaf2;color:var(--ok)}
+  .pill.warn{border-color:#f2e0b0;background:#fff9ea;color:var(--warn)}
+  .pill.bad{border-color:#f4c7ca;background:#fdf0f1;color:var(--err)}
+  button,select,input,textarea{font-family:inherit;font-size:15px;color:var(--txt)}
+  button{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 16px}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+  button.primary:hover{background:#5b3bea}
+  button.ghost{background:transparent}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  main{max-width:980px;margin:auto;padding:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+  h2{font-size:19px;margin:0 0 6px}
+  h3{font-size:16px;margin:0 0 10px;color:var(--dim);font-weight:600}
+  p.hint,span.hint{color:var(--dim);font-size:13.5px;line-height:2}
+  textarea{width:100%;min-height:120px;border:1.5px solid var(--line);border-radius:16px;padding:14px;line-height:2;resize:vertical;background:#fbfbff}
+  textarea:focus,input:focus{outline:none;border-color:var(--accent)}
+  input[type=text],input[type=password]{width:100%;border:1.5px solid var(--line);border-radius:14px;padding:12px;background:#fbfbff}
+  select{border:1.5px solid var(--line);border-radius:14px;padding:11px;background:#fbfbff;width:100%}
+  .actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}
+  @media(max-width:640px){.actions{grid-template-columns:1fr}}
+  .big{padding:16px;border-radius:16px;text-align:right;line-height:1.7}
+  .big b{display:block;font-size:16.5px}
+  .big span{font-size:12.5px;color:var(--dim)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-size:13.5px;cursor:pointer}
+  .chip:hover{border-color:var(--accent);color:var(--accent)}
+  /* ── گفتگو */
+  .bubble{border-radius:16px;padding:12px 14px;margin:10px 0;line-height:2.05;white-space:pre-wrap;word-break:break-word}
+  .bubble.me{background:#efeaff;border:1px solid #ddd3ff}
+  .bubble.ai{background:#fff;border:1px solid var(--line)}
+  .bubble .who{font-size:12px;color:var(--dim);margin-bottom:6px}
+  .bubble pre{background:#0f1424;color:#e9ecff;border-radius:12px;padding:12px;overflow:auto;direction:ltr;text-align:left;
+              white-space:pre-wrap;font-size:13.5px}
+  .bubble code{background:#f0f2fa;border-radius:6px;padding:1px 6px;direction:ltr;display:inline-block}
+  .bubble h1,.bubble h2,.bubble h3{margin:12px 0 6px}
+  /* ── کارت‌های انتخاب */
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:700px){.choices{grid-template-columns:1fr}}
+  .choice{border:2px solid var(--line);border-radius:16px;padding:14px;cursor:pointer;background:#fff;transition:.15s}
+  .choice:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .choice.on{border-color:var(--accent);background:#f7f4ff;box-shadow:0 0 0 3px #ece6ff}
+  .choice b{display:block;margin-bottom:4px}
+  .choice .tag{font-size:12px;border-radius:999px;padding:2px 8px;background:#eefaf2;color:var(--ok);margin-inline-start:6px}
+  .choice .tag.p{background:#fff4e5;color:var(--warn)}
+  /* ── فایل‌ها */
+  .file{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:9px 11px;margin-bottom:7px;background:#fbfbff}
+  .file a{flex:1;text-decoration:none;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left}
+  .file .sz{font-size:12px;color:var(--dim);white-space:nowrap}
+  button.mini{padding:4px 9px;font-size:12px;border-radius:9px;border:1px solid var(--line);background:#fff;white-space:nowrap}
+  button.mini:hover{border-color:var(--accent);color:var(--accent)}
+  .file{flex-wrap:wrap}
+  .progress{height:8px;background:#eceefb;border-radius:999px;overflow:hidden;margin-top:10px;display:none}
+  .progress.on{display:block}
+  .progress i{display:block;height:100%;width:30%;background:linear-gradient(90deg,#6d4bff,#0ea5b7);animation:sl 1.1s infinite}
+  @keyframes sl{0%{margin-right:-35%}100%{margin-right:100%}}
+  .log{background:#0f1424;color:#cfd6ff;border-radius:12px;padding:10px;font-size:13px;direction:ltr;text-align:left;
+       max-height:220px;overflow:auto;white-space:pre-wrap;margin-top:10px}
+  footer{color:var(--dim);font-size:12.5px;text-align:center;padding:22px}
+  dialog{border:0;border-radius:20px;padding:0;max-width:720px;width:94%;box-shadow:0 20px 60px rgba(20,25,60,.25)}
+  dialog::backdrop{background:rgba(15,18,40,.45)}
+  .dlg-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .dlg-body{padding:16px;max-height:70vh;overflow:auto}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+  .status{font-size:13.5px;line-height:2}
+  .ok{color:var(--ok)} .err{color:var(--err)} .warn{color:var(--warn)}
+  .mic.rec{background:#fdecec;border-color:#e2434b;color:#e2434b}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span> دستیار من <span class="pill" id="brandPill">MEGA-AI</span></div>
+  <div class="grow"></div>
+  <span class="pill" id="connPill">در حال بررسی…</span>
+  <button class="ghost" id="openSettings">⚙️ تنظیمات</button>
+  <a href="/advanced" style="text-decoration:none"><button class="ghost">🧰 حالت حرفه‌ای</button></a>
+</header>
+
+<main>
+  <!-- ═══ راه‌اندازی اولیه ═══ -->
+  <section class="card" id="setupCard">
+    <h2>👋 خوش آمدی — ۱ دقیقه تا آماده شدن</h2>
+    <p class="hint">یکی از راه‌های زیر را انتخاب کن، کلید را بچسبان، «تست اتصال» را بزن. تمام.</p>
+    <div class="choices" id="choices"></div>
+
+    <div id="setupForm" style="margin-top:14px">
+      <label class="hint" id="keyLabel">کلید API</label>
+      <input type="password" id="setupKey" placeholder="کلید را اینجا بچسبان">
+      <div id="customBox" class="hidden" style="margin-top:10px">
+        <label class="hint">آدرس سرویس (Base URL)</label>
+        <input type="text" id="setupBase" placeholder="https://example.com/v1">
+        <label class="hint" style="margin-top:8px;display:block">نام مدل‌ها (اختیاری، با کاما)</label>
+        <input type="text" id="setupModels" placeholder="gpt-4o, claude-sonnet-4-5">
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" id="testBtn">🔌 تست اتصال</button>
+        <button id="saveBtn">💾 ذخیره و شروع</button>
+        <button class="ghost" id="skipBtn">فعلاً بدون کلید (نمایشی)</button>
+        <span class="hint" id="setupNote"></span>
+      </div>
+      <div class="progress" id="setupProgress"><i></i></div>
+      <div class="log hidden" id="setupLog"></div>
+      <div id="setupResult" class="status" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- ═══ صفحه اصلی ═══ -->
+  <section class="card" id="mainCard">
+    <h2>چه کاری برایت انجام بدهم؟</h2>
+    <textarea id="ask" placeholder="مثلاً: یک تبلیغ ویدیویی ۳۰ ثانیه‌ای برای یک کافه بساز   |   یک برنامه‌ی پایتون بنویس که فایل‌های تکراری را پیدا کند   |   این متن را خلاصه کن…"></textarea>
+    <div class="chips" id="chips"></div>
+    <div class="actions">
+      <button class="big" id="btnQuick"><b>⚡ جواب سریع</b><span>پاسخ فوری یک مدل قوی</span></button>
+      <button class="big" id="btnSmart"><b>🧠 جواب دقیق</b><span>چند هوش + نقد + داوری</span></button>
+      <button class="big primary" id="btnDo"><b>🛠 انجامش بده</b><span>اجرا با ابزار، ساخت فایل و تحویل</span></button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="ghost mic" id="micBtn">🎙 با صدا بگو</button>
+      <button class="ghost" id="upBtn">📎 آپلود فایل / عکس</button>
+      <input type="file" id="upInput" multiple style="display:none">
+      <button class="ghost" id="stopBtn" disabled>⏹ توقف</button>
+      <div class="grow"></div>
+      <span class="hint" id="busy"></span>
+    </div>
+    <div class="progress" id="mainProgress"><i></i></div>
+  </section>
+
+  <details class="card" id="promptsCard">
+    <summary style="cursor:pointer;font-weight:700;font-size:16px">🚀 پروژه‌های آماده (کلیک کن تا باز شود) — پرامپت‌های بزرگ و واقعی</summary>
+    <div id="promptList" style="margin-top:10px"><span class="hint">در حال بارگذاری…</span></div>
+  </details>
+
+  <section id="chat"></section>
+
+  <section class="card">
+    <h3>📎 چیزهایی که برایم فرستادی</h3>
+    <div id="uploads"><span class="hint">هنوز فایلی نفرستادی — دکمه‌ی «📎 آپلود فایل / عکس» را بزن.</span></div>
+  </section>
+
+  <section class="card">
+    <h3>📁 فایل‌های من</h3>
+    <div id="files"><span class="hint">هنوز فایلی ساخته نشده.</span></div>
+    <button class="ghost" id="refreshFiles" style="margin-top:8px">↻ بازخوانی</button>
+  </section>
+</main>
+
+<footer>MEGA-AI — روی کامپیوتر خودت اجرا می‌شود · داده‌ها پیش خودت می‌مانند</footer>
+
+<!-- ═══ تنظیمات ═══ -->
+<dialog id="settingsDlg">
+  <div class="dlg-head"><b>⚙️ تنظیمات</b><div class="grow"></div><button class="ghost" id="closeSettings">بستن</button></div>
+  <div class="dlg-body">
+    <h3>سرویس هوش مصنوعی</h3>
+    <select id="provSel"></select>
+    <div class="grid2" style="margin-top:10px">
+      <div><label class="hint">کلید API</label><input type="password" id="provKey" placeholder="کلید جدید (خالی = بدون تغییر)"></div>
+      <div><label class="hint">سطح قدرت مدل</label><select id="tierSel">
+        <option value="max">🔥 قوی‌ترین</option><option value="balanced">⚖️ متعادل</option><option value="cheap">💸 ارزان</option>
+      </select></div>
+    </div>
+    <label class="hint" style="display:block;margin-top:10px">آدرس سرویس (اگر لازم است عوض کن)</label>
+    <input type="text" id="provBase" placeholder="https://...">
+    <label class="hint" style="display:block;margin-top:10px">حالت سفارشی → نام مدل‌ها</label>
+    <input type="text" id="provModels" placeholder="gpt-4o, claude-sonnet-4-5">
+
+    <h3 style="margin-top:18px">🔐 پروکسی (برای سرویس‌های خارجی)</h3>
+    <p class="hint">اگر از گیت‌وی ایرانی استفاده می‌کنی، خالی بگذار. اگر کلید OpenAI/Google/Anthropic داری،
+      آدرس فیلترشکن خودت را بده — مثلاً <code>http://127.0.0.1:7890</code> یا <code>socks5://127.0.0.1:1080</code>.</p>
+    <div class="grid2">
+      <input type="text" id="proxyIn" placeholder="http://127.0.0.1:7890">
+      <select id="proxyScope">
+        <option value="foreign">فقط سرویس‌های خارجی (پیشنهاد)</option>
+        <option value="all">همه‌ی سرویس‌ها</option>
+      </select>
+    </div>
+
+    <div class="row" style="margin-top:16px">
+      <button class="primary" id="saveSettingsBtn">💾 ذخیره</button>
+      <button id="testSettingsBtn">🔌 تست این سرویس</button>
+      <button id="diagBtn">🩺 بررسی همه‌ی سرویس‌ها</button>
+      <button id="sysBtn">🖥 وضعیت این کامپیوتر</button>
+    </div>
+    <div class="progress" id="setProgress"><i></i></div>
+    <div id="setResult" class="status" style="margin-top:10px"></div>
+    <div class="log hidden" id="setLog"></div>
+  </div>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => (s??"").toString().replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let GATEWAYS=[], PICKED=null, CTRL=null, SESSION=localStorage.getItem("mega.simple.session")||"";
+
+const CHIPS = [
+  ["🎬 تبلیغ ویدیویی", "یک تبلیغ ویدیویی ۳۰ ثانیه‌ای برای محصول من بساز"],
+  ["🖼 پوستر تبلیغاتی", "یک پوستر تبلیغاتی حرفه‌ای برای فروشگاه من بساز"],
+  ["💻 برنامه بنویس", "یک برنامه‌ی پایتون بنویس، اجرا کن و خروجی را نشان بده"],
+  ["🌐 سایت بساز", "یک سایت معرفی خدمات بساز و اجرا کن"],
+  ["✍️ متن بنویس", "یک متن تبلیغاتی جذاب برای صفحه‌ی اینستاگرامم بنویس"],
+  ["📊 تحلیل کن", "داده‌هایم را تحلیل کن و نمودار بده"],
+  ["🌍 ترجمه کن", "این متن را به انگلیسی روان ترجمه کن: "],
+  ["💡 ایده بده", "برای کسب‌وکارم ۱۰ ایده‌ی درآمدی بده"],
+  ["📄 خلاصه کن", "این متن را در ۵ خط خلاصه کن: "],
+];
+
+/* ─── راه‌اندازی */
+async function loadPrompts(){
+  try{
+    const d = await (await fetch("/api/prompts")).json();
+    $("#promptList").innerHTML = (d.items||[]).map(p=>`
+      <div class="file" style="align-items:flex-start">
+        <span style="font-size:18px">🚀</span>
+        <div style="flex:1;min-width:220px">
+          <div style="font-weight:700">${esc(p.title)}</div>
+          <div class="hint" style="margin:2px 0 6px">${esc(p.hint||"")} · ${esc(p.file)}</div>
+        </div>
+        <button class="ghost mini" data-usep="${esc(p.id)}">🧠 بفرست به «جواب دقیق»</button>
+        <button class="ghost mini" data-usea="${esc(p.id)}">🛠 بسازش با «انجامش بده»</button>
+      </div>`).join("") || '<span class="hint">پروژه‌ای پیدا نشد.</span>';
+    $("#promptList").querySelectorAll("[data-usep],[data-usea]").forEach(b=> b.onclick = async ()=>{
+      const id = b.dataset.usep || b.dataset.usea; const asAgent = !!b.dataset.usea;
+      const r = await (await fetch("/api/prompts/"+encodeURIComponent(id))).json();
+      const m = (r.text||"").match(/```[a-z]*\n([\s\S]*?)```/);
+      $("#ask").value = (m? m[1] : r.text).trim();
+      $("#ask").scrollIntoView({behavior:"smooth",block:"center"});
+      $("#ask").focus();
+      addBubble("ai", `پرامپت «${esc(b.closest(".file").querySelector("div div").textContent)}» را گذاشتم در کادر ✍️\nمتن را بخوان (می‌توانی اسم‌ها را عوض کنی) و دکمه‌ی «${asAgent? "🛠 انجامش بده" : "🧠 جواب دقیق"}» را بزن.`);
+    });
+  }catch(e){ $("#promptList").innerHTML = '<span class="hint">بارگذاری نشد.</span>'; }
+}
+
+async function boot(){
+  $("#chips").innerHTML = CHIPS.map(([t,p])=>`<span class="chip" data-p="${esc(p)}">${esc(t)}</span>`).join("");
+  document.querySelectorAll(".chip").forEach(c=> c.onclick = ()=>{ $("#ask").value=c.dataset.p; $("#ask").focus(); });
+  await loadGateways();
+  const st = await health();
+  // اگر سرویسی وصل است، کارت راه‌اندازی را جمع کن
+  if(!st.demo || st.demo_model){ $("#setupCard").classList.add("hidden"); }
+  loadFiles(); loadUploads(); loadPrompts();
+}
+function fmtSize(b){ return b>1048576? (b/1048576).toFixed(1)+" MB" : Math.max(1,Math.round(b/1024))+" KB"; }
+function fileIcon(n){const e=(n.split(".").pop()||"").toLowerCase();
+  return {mp4:"🎬",mp3:"🔊",png:"🖼",jpg:"🖼",jpeg:"🖼",csv:"📊",xlsx:"📊",py:"🐍",html:"🌐",md:"📝",zip:"🗜",srt:"💬"}[e]||"📄";}
+
+async function loadGateways(){
+  const d = await (await fetch("/api/gateways")).json(); GATEWAYS = d.gateways||[];
+  const iran = GATEWAYS.filter(g=>g.iran_friendly), world = GATEWAYS.filter(g=>!g.iran_friendly);
+  const box = $("#choices");
+  box.innerHTML = "";
+  const card = (g, tag, cls) => `
+    <div class="choice" data-id="${g.id}">
+      <b>${esc(g.label)} ${g.configured?'<span class="tag">وصل است ✅</span>':''}</b>
+      <span class="hint">${esc(g.docs)}${g.signup && g.signup!=="—" ? ` · <a href="${esc(g.signup)}" target="_blank" rel="noopener">گرفتن کلید</a>`:""}</span>
+    </div>`;
+  box.insertAdjacentHTML("beforeend", `<div style="grid-column:1/-1"><b>🇮🇷 گیت‌وی‌های ایرانی — بدون فیلترشکن</b>
+    <span class="hint">با کارت ایرانی شارژ می‌شود و به GPT / Claude / Gemini وصل می‌شود</span></div>`);
+  box.insertAdjacentHTML("beforeend", iran.map(g=>card(g)).join(""));
+  box.insertAdjacentHTML("beforeend", `<div style="grid-column:1/-1;margin-top:8px"><b>🌍 سرویس‌های جهانی — نیازمند پروکسی</b>
+    <span class="hint">اگر فیلترشکن داری، این‌ها مستقیم هم کار می‌کنند</span></div>`);
+  box.insertAdjacentHTML("beforeend", world.map(g=>card(g)).join(""));
+  box.insertAdjacentHTML("beforeend", `<div style="grid-column:1/-1;margin-top:8px"><b>🧩 سرویس سفارشی</b>
+    <span class="hint">هر آدرس سازگار با OpenAI (گیت‌وی دیگر، Ollama، vLLM…)</span></div>`);
+  box.querySelectorAll(".choice").forEach(c=> c.onclick = ()=>{
+    box.querySelectorAll(".choice").forEach(x=>x.classList.remove("on")); c.classList.add("on");
+    PICKED = GATEWAYS.find(g=>g.id===c.dataset.id);
+    $("#customBox").classList.toggle("hidden", PICKED.id!=="custom");
+    if(PICKED.base_url && PICKED.id==="custom") $("#setupBase").value="";
+    $("#setupKey").focus();
+  });
+  const first = GATEWAYS.find(g=>!g.configured && g.iran_friendly) || GATEWAYS[0];
+  const el = box.querySelector(`.choice[data-id="${first.id}"]`); if(el) el.click();
+}
+
+async function health(){
+  const d = await (await fetch("/api/health")).json();
+  const b = $("#connPill");
+  if(d.demo && !d.demo_model){ b.className="pill bad"; b.textContent="کلیدی وصل نیست"; }
+  else if(d.demo){ b.className="pill warn"; b.textContent="حالت نمایشی (کلید بده تا واقعی شود)"; }
+  else { b.className="pill ok"; b.textContent=`وصل ✅ ${(d.active||[]).join(" · ")}`; }
+  try{
+    const g = await (await fetch("/api/gateways")).json();
+    const s = g.settings||{};
+    $("#provSel").innerHTML = GATEWAYS.map(x=>`<option value="${x.id}" ${x.configured?"":""}>${x.iran_friendly?"🇮🇷 ":"🌍 "}${esc(x.label)}${x.configured?" ✅":""}</option>`).join("");
+    $("#tierSel").value = s.model_tier||"max"; $("#proxyIn").value = s.proxy||""; $("#proxyScope").value = s.proxy_scope||"foreign";
+  }catch(e){}
+  return d;
+}
+
+/* ─── تست و ذخیره ─── */
+async function testConn(data){
+  const log = $("#setLog"); 
+  $("#setupProgress").classList.add("on"); $("#setProgress").classList.add("on");
+  $("#setupResult").innerHTML = "⏳ در حال تست…"; $("#setResult").innerHTML = "⏳ در حال تست…";
+  try{
+    const r = await (await fetch("/api/test",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(data)})).json();
+    const lines = [];
+    let head = "";
+    if(r.ok){
+      head = `<span class="ok">✅ اتصال برقرار است</span> — ${r.latency_ms} میلی‌ثانیه · ${r.models_count} مدل · انتخاب: <code>${esc(r.picked||"")}</code>`;
+      if(r.reply) lines.push("پاسخ مدل: "+r.reply);
+      lines.push("مدل‌های نمونه: "+(r.sample_models||[]).slice(0,10).join(", "));
+    } else {
+      head = `<span class="err">❌ وصل نشد</span>${r.stage?` (مرحله: ${esc(r.stage)})`:""}`;
+      lines.push("خطا: "+esc(r.error||""));
+      if(r.hint) lines.push("راه‌حل: "+esc(r.hint));
+      if((r.sample_models||[]).length) lines.push("مدل‌ها: "+r.sample_models.join(", "));
+    }
+    $("#setupResult").innerHTML = head; $("#setResult").innerHTML = head;
+    if(lines.length){ log.classList.remove("hidden"); log.textContent = lines.join("\n"); }
+    return r;
+  }catch(e){
+    $("#setupResult").innerHTML = `<span class="err">خطا: ${esc(e.message)}</span>`;
+    return {ok:false};
+  }finally{
+    $("#setupProgress").classList.remove("on"); $("#setProgress").classList.remove("on");
+  }
+}
+$("#testBtn").onclick = ()=>{
+  if(!PICKED) return alert("اول یک سرویس انتخاب کن.");
+  testConn({provider:PICKED.id, key:$("#setupKey").value.trim(),
+            base_url:$("#setupBase").value.trim(), models:$("#setupModels").value.trim()});
+};
+$("#saveBtn").onclick = async ()=>{
+  if(!PICKED) return alert("اول یک سرویس انتخاب کن.");
+  const key = $("#setupKey").value.trim();
+  if(!key && PICKED.id!=="custom") return alert("کلید API را وارد کن.");
+  const body = {provider:PICKED.id, key, base_url:$("#setupBase").value.trim(),
+                models:$("#setupModels").value.trim(), apply_base:true, tier:"max"};
+  const r = await (await fetch("/api/setup",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)})).json();
+  if(r.ok){ $("#setupResult").innerHTML = `<span class="ok">✅ ذخیره شد</span> — سرویس‌های فعال: ${(r.active||[]).join(", ")}`;
+    $("#setupCard").classList.add("hidden"); health();
+    addBubble("ai","عالی! وصل شدم ✅\nحالا هر چیزی بخواهی بنویس — جواب سریع، جواب دقیق چند-هوشی، یا «انجامش بده» تا واقعاً اجرا کنم.");
+  }
+};
+$("#skipBtn").onclick = ()=>{ $("#setupCard").classList.add("hidden"); };
+
+/* ─── تنظیمات ─── */
+const dlg = $("#settingsDlg");
+$("#openSettings").onclick = async ()=>{ await health(); dlg.showModal(); };
+$("#closeSettings").onclick = ()=> dlg.close();
+$("#provSel").onchange = ()=>{
+  const g = GATEWAYS.find(x=>x.id===$("#provSel").value);
+  if(g){ $("#provBase").value = g.base_url||""; $("#provModels").value = (g.models||[]).join(", "); }
+};
+$("#saveSettingsBtn").onclick = async ()=>{
+  const pid = $("#provSel").value;
+  const body = {provider:pid, key:$("#provKey").value.trim(), base_url:$("#provBase").value.trim(),
+                models:$("#provModels").value.trim(), apply_base:true,
+                proxy:$("#proxyIn").value.trim(), proxy_scope:$("#proxyScope").value,
+                tier:$("#tierSel").value};
+  const r = await (await fetch("/api/setup",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)})).json();
+  $("#setResult").innerHTML = r.ok ? `<span class="ok">✅ ذخیره شد</span> — فعال: ${(r.active||[]).join(", ")||"—"}` : "خطا در ذخیره";
+  health();
+};
+$("#testSettingsBtn").onclick = ()=> testConn({provider:$("#provSel").value, key:$("#provKey").value.trim(),
+  base_url:$("#provBase").value.trim(), models:$("#provModels").value.trim()});
+$("#sysBtn").onclick = async ()=>{
+  const log = $("#setLog"); log.classList.remove("hidden");
+  log.textContent = "⏳ در حال بررسی…";
+  try{
+    const d = await (await fetch("/api/system")).json();
+    const mark = v => v? "✅" : "❌";
+    const lines = [
+      `پایتون ${d.python} · ${d.os}`,
+      `منابع: ${d.cpu_count||"?"} هسته · RAM آزاد ${d.memory_free_gb||"?"} از ${d.memory_gb||"?"} گیگ · دیسک آزاد ${d.disk_free_gb||"?"} گیگ`,
+      "",
+      "ابزارهای سیستمی:",
+      ...Object.entries(d.tools||{}).map(([k,v])=> `  ${mark(v)} ${k}`),
+      "",
+      "کتابخانه‌ها:",
+      ...Object.entries(d.libs||{}).map(([k,v])=> `  ${mark(v)} ${k}`),
+      "",
+      `سرویس‌های فعال: ${(d.providers_active||[]).join(", ")||"—"}`,
+      ...(d.tips?.length? ["", "پیشنهادها:", ...d.tips.map(t=>"  • "+t)] : ["", "همه‌چیز آماده است ✅"]),
+    ];
+    log.textContent = lines.join("\n");
+  }catch(e){ log.textContent = "بررسی نشد: "+e.message; }
+};
+$("#diagBtn").onclick = async ()=>{
+  $("#setProgress").classList.add("on"); $("#setResult").textContent="⏳ بررسی همه‌ی سرویس‌ها…";
+  try{
+    const d = await (await fetch("/api/diagnose")).json();
+    const rows = (d.results||[]).map(r=> r.ok
+      ? `✅ ${r.provider_label||r.provider} — ${r.latency_ms}ms · ${r.models_count} مدل`
+      : `❌ ${r.provider} — ${(r.error||"").slice(0,120)}${r.hint? " | "+r.hint:""}`);
+    $("#setResult").innerHTML = `<b>${esc(d.advice)}</b>`;
+    $("#setLog").classList.remove("hidden"); $("#setLog").textContent = rows.join("\n") || "هیچ سرویس کلیدداری پیدا نشد.";
+  }finally{ $("#setProgress").classList.remove("on"); }
+};
+
+/* ─── گفتگو ─── */
+function addBubble(who, text, cls=""){
+  const d=document.createElement("div");
+  d.className="bubble "+(who==="me"?"me":"ai")+" "+cls;
+  d.innerHTML = `<div class="who">${who==="me"?"شما":"دستیار"}</div><div class="body"></div>`;
+  d.querySelector(".body").innerHTML = who==="me"? esc(text) : mdLite(text);
+  $("#chat").appendChild(d); d.scrollIntoView({behavior:"smooth",block:"end"}); return d;
+}
+function mdLite(t){
+  let s = esc(t||"");
+  const blocks=[]; s = s.replace(/```(\w*)\n?([\s\S]*?)```/g,(m,l,c)=>{blocks.push(`<pre>${c}</pre>`);return `\u0000${blocks.length-1}\u0000`;});
+  s = s.replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>");
+  s = s.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/`([^`\n]+)`/g,"<code>$1</code>");
+  s = s.replace(/\n/g,"<br>");
+  blocks.forEach((b,i)=> s = s.replace(new RegExp(`\u0000${i}\u0000`), b));
+  return s;
+}
+function busy(t){ $("#busy").textContent = t; $("#mainProgress").classList.toggle("on", !!t); }
+function setRunning(on){ $("#btnQuick").disabled=on; $("#btnSmart").disabled=on; $("#btnDo").disabled=on; $("#stopBtn").disabled=!on; }
+$("#stopBtn").onclick = ()=>{ if(CTRL) CTRL.abort(); };
+
+/* ⚡ جواب سریع */
+$("#btnQuick").onclick = async ()=>{
+  const text = $("#ask").value.trim(); if(!text) return alert("سؤالت را بنویس.");
+  addBubble("me", text); $("#ask").value="";
+  const el = addBubble("ai", "…");
+  const body = el.querySelector(".body"); let acc="";
+  CTRL = new AbortController(); setRunning(true); busy("در حال نوشتن…");
+  try{
+    const res = await fetch(`/api/simple/chat?text=${encodeURIComponent(text)}&session=${encodeURIComponent(SESSION||"ساده")}&tier=${encodeURIComponent($("#tierSel")?.value||"max")}`,
+                            {signal:CTRL.signal});
+    const reader=res.body.getReader(), dec=new TextDecoder(); let buf="";
+    while(true){ const {value,done}=await reader.read(); if(done)break;
+      buf+=dec.decode(value,{stream:true}); const parts=buf.split("\n\n"); buf=parts.pop();
+      for(const p of parts){ const line=p.split("\n").find(l=>l.startsWith("data: ")); if(!line)continue;
+        let ev; try{ev=JSON.parse(line.slice(6));}catch(e){continue;}
+        if(ev.type==="delta"){ acc+=ev.text; body.innerHTML = mdLite(acc); el.scrollIntoView({behavior:"smooth",block:"end"}); }
+        if(ev.type==="error"){ body.innerHTML += `<div class="err">⚠️ ${esc(ev.message)}</div>`; }
+        if(ev.type==="model"){ el.querySelector(".who").textContent = "دستیار · "+ev.name; }
+      } }
+  }catch(e){ if(e.name!=="AbortError") body.innerHTML += `<div class="err">${esc(e.message)}</div>`; }
+  busy(""); setRunning(false); loadFiles();
+};
+
+/* 🧠 جواب دقیق */
+$("#btnSmart").onclick = ()=> runCouncil("deep");
+/* 🛠 انجامش بده */
+$("#btnDo").onclick = ()=> runAgent();
+
+async function runCouncil(mode){
+  const prompt = $("#ask").value.trim(); if(!prompt) return alert("سؤالت را بنویس.");
+  addBubble("me", prompt); $("#ask").value="";
+  const el = addBubble("ai", "🧠 چند هوش دارند روی این کار می‌کنند…");
+  const body = el.querySelector(".body"); const log = document.createElement("div");
+  body.appendChild(log);
+  CTRL = new AbortController(); setRunning(true); busy("پنل خبرگان در حال کار…");
+  if(!SESSION){ SESSION="u-"+Math.random().toString(36).slice(2,9); localStorage.setItem("mega.simple.session",SESSION); }
+  try{
+    const res = await fetch("/api/run",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({prompt, session_id:SESSION, mode}), signal:CTRL.signal});
+    const reader=res.body.getReader(), dec=new TextDecoder(); let buf="";
+    while(true){ const {value,done}=await reader.read(); if(done)break;
+      buf+=dec.decode(value,{stream:true}); const parts=buf.split("\n\n"); buf=parts.pop();
+      for(const p of parts){ const line=p.split("\n").find(l=>l.startsWith("data: ")); if(!line)continue;
+        let ev; try{ev=JSON.parse(line.slice(6));}catch(e){continue;}
+        if(ev.type==="stage"&&ev.state==="start") log.innerHTML += `<div class="hint">• ${esc(ev.title||ev.role)} ${ev.model?`<code>${esc(ev.model)}</code>`:""}</div>`;
+        if(ev.type==="tool") log.innerHTML += `<div class="hint">🔧 ${esc(ev.name)}</div>`;
+        if(ev.type==="final"){ body.innerHTML = mdLite(ev.text); loadFiles(); }
+        if(ev.type==="error") log.innerHTML += `<div class="err">${esc(ev.message)}</div>`;
+      } }
+  }catch(e){ if(e.name!=="AbortError") log.innerHTML += `<div class="err">${esc(e.message)}</div>`; }
+  busy(""); setRunning(false);
+}
+
+async function runAgent(){
+  const goal = $("#ask").value.trim(); if(!goal) return alert("بگو چه کاری انجام بدهم.");
+  addBubble("me", goal); $("#ask").value="";
+  const el = addBubble("ai", "🛠 دارم انجامش می‌دهم…"); const body = el.querySelector(".body");
+  const log = document.createElement("div"); log.className="log"; log.classList.add("hidden");
+  body.appendChild(log);
+  CTRL = new AbortController(); setRunning(true); busy("در حال اجرای واقعی…");
+  let acc="";
+  try{
+    const res = await fetch("/api/agent",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({goal, session_id:SESSION||("u-"+Math.random().toString(36).slice(2,9)), mode:"agent"}),
+      signal:CTRL.signal});
+    const reader=res.body.getReader(), dec=new TextDecoder(); let buf="";
+    while(true){ const {value,done}=await reader.read(); if(done)break;
+      buf+=dec.decode(value,{stream:true}); const parts=buf.split("\n\n"); buf=parts.pop();
+      for(const p of parts){ const line=p.split("\n").find(l=>l.startsWith("data: ")); if(!line)continue;
+        let ev; try{ev=JSON.parse(line.slice(6));}catch(e){continue;}
+        if(ev.type==="tool"){ log.classList.remove("hidden"); log.textContent += `🔧 ${ev.name} ${JSON.stringify(ev.args||{}).slice(0,160)}\n`; log.scrollTop=1e6; }
+        if(ev.type==="tool_result"){ log.textContent += `${String(ev.result||"").slice(0,400)}\n`; log.scrollTop=1e6; }
+        if(ev.type==="artifact"){ log.textContent += `📦 ${ev.name||ev.path} (${fmtSize(ev.size)}) — ${ev.url||""}\n`; log.scrollTop=1e6; loadFiles(); }
+        if(ev.type==="final"){ acc = ev.text; body.innerHTML = mdLite(ev.text) +
+          (ev.artifacts?.length? `<div style="margin-top:10px">${ev.artifacts.map(a=>`<div class="file">${fileIcon(a.path)}
+            <a href="${a.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(a.path))}" target="_blank">${esc(a.name||a.path)}</a><span class="sz">${fmtSize(a.size)}</span></div>`).join("")}</div>` : "");
+          loadFiles(); }
+        if(ev.type==="error") log.textContent += `⚠️ ${ev.message}\n`;
+      } }
+  }catch(e){ if(e.name!=="AbortError") body.innerHTML += `<div class="err">${esc(e.message)}</div>`; }
+  busy(""); setRunning(false);
+}
+
+/* ─── فایل‌ها ─── */
+async function loadFiles(){
+  try{
+    const d = await (await fetch("/api/artifacts")).json();
+    const items=(d.items||[]).slice(0,30);
+    $("#files").innerHTML = items.length? items.map(f=>`<div class="file">${fileIcon(f.name)}
+      <a href="${f.url}" target="_blank">${esc(f.path)}</a><span class="sz">${fmtSize(f.size)}</span></div>`).join("")
+      : `<span class="hint">هنوز فایلی ساخته نشده.</span>`;
+  }catch(e){}
+}
+$("#refreshFiles").onclick = loadFiles;
+
+/* ─── آپلود و تحلیل فایل کاربر ─── */
+function ensureSession(){
+  if(!SESSION){ SESSION="u-"+Math.random().toString(36).slice(2,9); localStorage.setItem("mega.simple.session",SESSION); }
+  return SESSION;
+}
+$("#upBtn").onclick = ()=> $("#upInput").click();
+$("#upInput").onchange = async ()=>{
+  const fs = [...$("#upInput").files]; if(!fs.length) return;
+  const fd = new FormData(); fs.forEach(f=> fd.append("file", f, f.name));
+  $("#upBtn").textContent = "⏳ در حال فرستادن…";
+  try{
+    const d = await (await fetch(`/api/upload?session=${encodeURIComponent(ensureSession())}`,{method:"POST",body:fd})).json();
+    if(d.ok){
+      const names = d.saved.map(x=>x.name).join("، ");
+      let extra = "";
+      const img = d.saved.find(x=>x.kind==="image" && x.quick && x.quick.dimensions);
+      if(img) extra = `\n\n📐 ${img.quick.dimensions} · ${img.quick.orientation} · روشنایی ${img.quick.brightness_label} · وضوح ${img.quick.sharpness_label}`;
+      addBubble("ai", `فایل‌هایت را گرفتم ✅\n**${names}**${extra}\n\nمی‌توانی بگویی:\n• «همین فایل را تحلیل کن»\n• «از همین عکس یک پوستر بساز»\n• «از این عکس تبلیغ ویدیویی بساز»`);
+      loadUploads();
+    } else alert("آپلود نشد.");
+  }catch(e){ alert("خطای شبکه در آپلود: "+e.message); }
+  $("#upBtn").textContent = "📎 آپلود فایل / عکس"; $("#upInput").value="";
+};
+
+async function loadUploads(){
+  try{
+    const d = await (await fetch(`/api/uploads?session=${encodeURIComponent(SESSION||"")}`)).json();
+    const items = (d.items||[]).slice(0,20);
+    $("#uploads").innerHTML = items.length ? items.map(f=>`
+      <div class="file">${fileIcon(f.name)}
+        <a href="${f.url}" target="_blank">${esc(f.name)}</a>
+        <span class="sz">${fmtSize(f.size)} · ${f.kind}</span>
+        <button class="ghost mini" data-an="${f.path}" data-name="${esc(f.name)}">🔍 تحلیل</button>
+        <button class="ghost mini" data-po="${f.path}">🖼 پوستر</button>
+        <button class="ghost mini" data-ad="${f.path}">🎬 تبلیغ</button>
+      </div>`).join("") : `<span class="hint">هنوز فایلی نفرستادی — دکمه‌ی «📎 آپلود فایل / عکس» را بزن.</span>`;
+    $("#uploads").querySelectorAll("[data-an]").forEach(b=> b.onclick = ()=> analyzeUpload(b.dataset.an, b.dataset.name));
+    $("#uploads").querySelectorAll("[data-po]").forEach(b=> b.onclick = ()=>{ $("#ask").value = `از این عکس یک پوستر حرفه‌ای ۹:۱۶ بساز: ${b.dataset.po}`; runAgent(); });
+    $("#uploads").querySelectorAll("[data-ad]").forEach(b=> b.onclick = ()=>{ $("#ask").value = `از این عکس یک تبلیغ ویدیویی بساز (به‌عنوان پس‌زمینه): ${b.dataset.ad}`; runAgent(); });
+  }catch(e){}
+}
+$("#")
+async function analyzeUpload(path, name){
+  const el = addBubble("ai", `🔍 دارم «${name}» را واقعاً تحلیل می‌کنم…`);
+  const body = el.querySelector(".body");
+  try{
+    const d = await (await fetch("/api/analyze",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({path, question: $("#ask").value.trim()})})).json();
+    if(!d.ok){ body.innerHTML = `<div class="err">تحلیل نشد: ${esc(d.error||"")}</div>`; return; }
+    let html = mdLite(d.report||"");
+    if(d.chart_urls?.length) html += `<div style="margin-top:8px">${d.chart_urls.map(u=>`<div class="file">📈 <a href="${u}" target="_blank">${esc(u.split("/").pop())}</a></div>`).join("")}</div>`;
+    body.innerHTML = html; loadFiles();
+  }catch(e){ body.innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+}
+
+/* ─── میکروفون ─── */
+$("#micBtn").onclick = async ()=>{
+  const btn=$("#micBtn");
+  if(btn.classList.contains("rec")){ btn.classList.remove("rec"); btn.textContent="🎙 با صدا بگو"; return; }
+  let rec, chunks=[];
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    rec = new MediaRecorder(stream); rec.ondataavailable = e=> chunks.push(e.data);
+    rec.onstop = async ()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      const fd = new FormData(); fd.append("file", new File([new Blob(chunks,{type:"audio/webm"})],"voice.webm"));
+      btn.textContent="⏳ تشخیص گفتار…";
+      try{
+        const d = await (await fetch("/api/voice/stt",{method:"POST",body:fd})).json();
+        if(d.ok){ $("#ask").value = ($("#ask").value+" "+d.text).trim(); }
+        else alert("تشخیص گفتار ممکن نشد: "+(d.error||""));
+      }catch(e){ alert("خطای شبکه در تشخیص گفتار"); }
+      btn.textContent="🎙 با صدا بگو"; btn.classList.remove("rec");
+    };
+    rec.start(); btn.classList.add("rec"); btn.textContent="⏹ پایان ضبط";
+  }catch(e){ alert("دسترسی به میکروفون ممکن نشد."); }
+};
+
+boot();
+</script>
+</body>
+</html>

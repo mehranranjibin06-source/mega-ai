@@ -1,0 +1,20 @@
+{
+  "name": "MEGA-AI (ابرهوش شخصی)",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu fonts-noto && pip install -r requirements.txt",
+  "postStartCommand": "nohup python3 server.py > /tmp/mega.log 2>&1 &",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": { "label": "MEGA-AI Panel", "onAutoForward": "openPreview", "visibility": "public" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python"],
+      "settings": { "terminal.integrated.cwd": "/workspaces" }
+    }
+  },
+  "hostRequirements": { "cpus": 2, "memory": "4gb" }
+}

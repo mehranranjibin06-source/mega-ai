@@ -1,0 +1,15 @@
+services:
+  mega-ai:
+    build: .
+    container_name: mega-ai
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # پروکسی اختیاری برای سرویس‌های خارجی (مثلاً روی هاست خودت)
+      - MEGA_PROXY=${MEGA_PROXY:-}
+    volumes:
+      - ./workspace:/app/workspace
+      - ./data:/app/data
+    restart: unless-stopped
