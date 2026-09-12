@@ -36,6 +36,36 @@ load_env()
 STATE: dict = {"settings": SETTINGS}
 
 
+# ── رمز اختیاری (برای وقتی برنامه روی سرور عمومی اجرا می‌شود) ──────────────
+# در ویندوز:  set MEGA_PASSWORD=رمز-خودت   ← قبل از اجرا
+# یا در فایل .env بگذار:  MEGA_PASSWORD=رمز-خودت
+# اگر خالی باشد، برنامه مثل قبل بدون رمز کار می‌کند.
+@app.middleware("http")
+async def _password_gate(request: Request, call_next):
+    pw = os.environ.get("MEGA_PASSWORD", "").strip()
+    if not pw:
+        return await call_next(request)
+
+    import base64
+    import hmac
+    ok = False
+    head = request.headers.get("authorization", "")
+    if head[:6].lower() == "basic ":
+        try:
+            raw = base64.b64decode(head[6:]).decode("utf-8", "ignore")
+            _, _, given = raw.partition(":")
+            ok = hmac.compare_digest(given, pw)
+        except Exception:  # noqa: BLE001
+            ok = False
+    if ok:
+        return await call_next(request)
+    return JSONResponse(
+        {"ok": False, "error": "این سرور رمز دارد. نام کاربری مهم نیست؛ فقط رمز را بزن."},
+        status_code=401,
+        headers={"WWW-Authenticate": 'Basic realm="MEGA-AI"'},
+    )
+
+
 def _listen_port() -> int:
     """پورت شنود: اول PORT (میزبان‌های ابری مثل Render)، بعد MEGA_PORT، بعد ۸۰۰۰."""
     for key in ("PORT", "MEGA_PORT"):
