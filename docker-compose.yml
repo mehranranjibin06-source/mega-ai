@@ -13,3 +13,5 @@ services:
       - ./workspace:/app/workspace
       - ./data:/app/data
     restart: unless-stopped
+    # اگر .env نداری، خط env_file را کامنت کن
+    # command: python server.py
