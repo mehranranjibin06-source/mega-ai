@@ -122,57 +122,14 @@ def lan_ip() -> str:
 
 # ───────────────────────── QR ─────────────────────────
 def make_qr(url: str, out: Path) -> bool:
+    """پوستر QR — منطق کامل در make_qr.py (یک‌جا نگهداری می‌شود)."""
     try:
-        import qrcode
-        from PIL import Image, ImageDraw, ImageFont
-    except Exception:
-        log("ℹ️  qrcode/Pillow نصب نیست → پوستر QR ساخته نشد (pip install qrcode pillow)")
+        import make_qr as mq
+        mq.build(url, out)
+        return out.exists()
+    except Exception as e:  # noqa: BLE001
+        log(f"ℹ️  پوستر QR ساخته نشد ({e}) — می‌توانی بعداً اجرا کنی: python3 make_qr.py {url}")
         return False
-
-    W, H = 1000, 1300
-    BG, CARD, ACCENT, TXT, MUTED = (13, 17, 28), (24, 31, 46), (86, 156, 255), (235, 240, 248), (150, 163, 184)
-    img = Image.new("RGB", (W, H), BG)
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle([40, 40, W - 40, H - 40], radius=36, fill=CARD, outline=(45, 58, 82), width=3)
-
-    def font(size: int):
-        for name in ("Vazirmatn-Bold.ttf", "Vazirmatn-Regular.ttf"):
-            p = ROOT / "assets" / "fonts" / name
-            if p.exists():
-                try:
-                    return ImageFont.truetype(str(p), size)
-                except Exception:
-                    pass
-        return ImageFont.load_default()
-
-    def center(y: int, text: str, f, fill) -> None:
-        d.text(((W - d.textlength(text, font=f)) / 2, y), text, font=f, fill=fill)
-
-    center(92, "MehranAiShabestar", font(56), TXT)
-    center(186, "مهران‌هوش شبستر — هوش مصنوعی شخصی", font(32), MUTED)
-
-    qr = qrcode.QRCode(box_size=10, border=2, error_correction=qrcode.constants.ERROR_CORRECT_M)
-    qr.add_data(url)
-    qr.make(fit=True)
-    qimg = qr.make_image(fill_color="black", back_color="white").convert("RGB").resize((560, 560))
-    qx, qy = (W - 560) // 2, 268
-    d.rounded_rectangle([qx - 18, qy - 18, qx + 578, qy + 578], radius=24, fill=(255, 255, 255))
-    img.paste(qimg, (qx, qy))
-
-    if len(url) <= 42:
-        center(900, url, font(30), ACCENT)
-    else:
-        half = len(url) // 2
-        center(900, url[:half], font(30), ACCENT)
-        center(944, url[half:], font(30), ACCENT)
-    center(1030, "دوربین گوشی را روی کد بگیرید", font(30), TXT)
-    center(1084, "یا آدرس بالا را در مرورگر باز کنید", font(30), MUTED)
-    d.line([120, 1150, W - 120, 1150], fill=(45, 58, 82), width=2)
-    center(1176, "بدون کلید هم کار می‌کند (حالت نمایشی)", font(26), MUTED)
-    center(1222, "برای هوش واقعی: کلید API را در پنل وارد کنید", font(26), MUTED)
-
-    img.save(out)
-    return True
 
 
 # ───────────────────────── اصلی ─────────────────────────

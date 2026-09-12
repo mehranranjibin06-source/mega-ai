@@ -98,6 +98,17 @@ async def advanced():
     return FileResponse(WEB_DIR / "index.html")
 
 
+@app.get("/assets/{name}")
+async def asset_file(name: str):
+    """فایل‌های برند (لوگو، فونت) — از پوشه‌ی assets سرو می‌شوند."""
+    from pathlib import Path as _P
+    safe = _P(name).name                       # جلوگیری از پیمایش مسیر
+    target = _P(__file__).resolve().parent / "assets" / safe
+    if not target.is_file():
+        return JSONResponse({"ok": False, "error": "فایل پیدا نشد"}, status_code=404)
+    return FileResponse(target)
+
+
 @app.get("/api/health")
 async def health():
     from mega import demo_model
