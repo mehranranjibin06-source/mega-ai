@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MEGA-AI  |  خط فرمان (CLI)
+MehranAiShabestar  |  خط فرمان (CLI)
 ------------------------------------------------
   python cli.py "هر پرامپتی"                 → اجرای کامل با پنل خبرگان
   python cli.py -m deep "پرامپت"             → حالت عمیق (خبره بیشتر + نقد دو دور)
@@ -55,7 +55,7 @@ def cmd_rank() -> None:
 
 
 async def main() -> None:
-    ap = argparse.ArgumentParser(description="MEGA-AI — ارکستراتور چند-هوشی")
+    ap = argparse.ArgumentParser(description="MehranAiShabestar — ارکستراتور چند-هوشی")
     ap.add_argument("prompt", nargs="*", help="پرامپت")
     ap.add_argument("-m", "--mode", default="panel", choices=["fast", "panel", "deep", "all", "code"])
     ap.add_argument("-s", "--session", default="cli", help="شناسه‌ی نشست (برای ادامه‌ی گفتگو)")
@@ -99,7 +99,7 @@ async def main() -> None:
         print("\n⚠️  هیچ کلید API ثبت نشده؛ اجرا در حالت نمایشی (DEMO) انجام می‌شود.")
         print("    برای اتصال واقعی:  python cli.py --set-key OPENROUTER_API_KEY=sk-or-...\n")
 
-    print(f"\n{'═'*64}\n🧠 MEGA-AI  |  حالت: {args.mode}  |  نشست: {args.session}\n{'═'*64}")
+    print(f"\n{'═'*64}\n🧠 MehranAiShabestar  |  حالت: {args.mode}  |  نشست: {args.session}\n{'═'*64}")
     final = await run_once(prompt, session_id=args.session, mode=args.mode,
                            settings=SETTINGS,
                            printer=None if args.quiet else ("live" if args.live else "summary"))

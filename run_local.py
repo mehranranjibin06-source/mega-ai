@@ -32,6 +32,7 @@ import webbrowser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+REQ = ROOT / "requirements.txt"
 IS_WIN = os.name == "nt"
 MIN_PY = (3, 10)
 
@@ -84,26 +85,52 @@ def ensure_venv() -> str:
 
 
 def deps_missing(py: str) -> list[str]:
-    """کتابخانه‌های لازم که در همان مفسر داده‌شده نصب نیستند."""
-    probe = ("import importlib.util as u\n"
-             "mods = {'fastapi':'fastapi','uvicorn':'uvicorn','httpx':'httpx',"
-             "'multipart':'python-multipart','PIL':'pillow','pandas':'pandas',"
-             "'matplotlib':'matplotlib','openpyxl':'openpyxl','pypdf':'pypdf',"
-             "'docx':'python-docx','arabic_reshaper':'arabic-reshaper','bidi':'python-bidi'}\n"
-             "print(','.join(pkg for mod, pkg in mods.items() if u.find_spec(mod) is None))")
+    """پکیج‌های pip که در همان مفسر داده‌شده نصب نیستند (فهرست کامل: mega/prereqs.py)."""
     try:
-        r = subprocess.run([py, "-c", probe], capture_output=True, text=True, timeout=120)
-        return [x for x in (r.stdout or "").strip().split(",") if x]
-    except Exception:
-        return []
+        sys.path.insert(0, str(ROOT))
+        from mega.prereqs import missing_python
+        return missing_python(py)
+    except Exception:  # noqa: BLE001 — نبودِ فایل نباید اجرا را متوقف کند
+        probe = ("import importlib.util as u\n"
+                 "mods = {'fastapi':'fastapi','uvicorn':'uvicorn','httpx':'httpx',"
+                 "'multipart':'python-multipart','PIL':'pillow','pandas':'pandas',"
+                 "'matplotlib':'matplotlib','openpyxl':'openpyxl','pypdf':'pypdf',"
+                 "'docx':'python-docx','arabic_reshaper':'arabic-reshaper','bidi':'python-bidi'}\n"
+                 "print(','.join(pkg for mod, pkg in mods.items() if u.find_spec(mod) is None))")
+        try:
+            r = subprocess.run([py, "-c", probe], capture_output=True, text=True, timeout=120)
+            return [x for x in (r.stdout or "").strip().split(",") if x]
+        except Exception:
+            return []
+
+
+def pip_install(py: str, packages: list[str] | None = None) -> bool:
+    """نصب پکیج‌ها با pip — با چند mirror (پایتون‌پای اصلی و آینه‌های در دسترس از ایران)."""
+    try:
+        sys.path.insert(0, str(ROOT))
+        from mega.prereqs import install_python
+        return install_python(py, packages)
+    except Exception:  # noqa: BLE001
+        cmd = [py, "-m", "pip", "install", "--upgrade"] + (packages or ["-r", str(REQ)])
+        try:
+            return subprocess.run(cmd).returncode == 0
+        except Exception:
+            return False
 
 
 def ensure_deps(py: str, install: bool = True) -> None:
+    """همهٔ پیش‌نیازها: کتابخانه‌ها + ابزارهای جانبی (ffmpeg)."""
+    try:
+        sys.path.insert(0, str(ROOT))
+        from mega.prereqs import ensure_all
+        ensure_all(py, install=install)
+        return
+    except Exception:  # noqa: BLE001
+        pass
     missing = deps_missing(py)
     if not missing:
         say(c("همه‌ی کتابخانه‌های لازم نصب‌اند ✅", "g"))
         return
-    core = {"fastapi", "uvicorn", "httpx", "python-multipart", "pillow"}
     say(c("کتابخانه‌های لازم نیستند: " + ", ".join(missing), "y"))
     if install:
         pip_install(py, missing)
@@ -177,7 +204,7 @@ def main() -> int:
 
     print()
     print(c("  ╔══════════════════════════════════════════╗", "bold"))
-    print(c("  ║        MEGA-AI — ابرهوش شخصی تو          ║", "bold"))
+    print(c("  ║     MehranAiShabestar — هوش مصنوعی تو    ║", "bold"))
     print(c("  ╚══════════════════════════════════════════╝", "bold"))
     print()
     say(f"پایتون: {platform.python_version()} · سیستم: {platform.system()} {platform.release()}")

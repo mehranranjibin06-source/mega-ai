@@ -3,7 +3,7 @@ REM  MEGA-AI -- Windows launcher (ASCII only: safe on every Windows codepage)
 REM  All Persian messages are printed by start_vps.py (Python renders them correctly).
 chcp 65001 >nul
 cd /d "%~dp0"
-title MEGA-AI
+title MehranAiShabestar
 
 where python >nul 2>nul
 if errorlevel 1 goto nopython

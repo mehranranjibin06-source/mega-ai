@@ -125,7 +125,7 @@ def lan_ip() -> str:
 
 def main() -> int:
     say("=" * 60)
-    say("   ابرهوش — راه‌اندازی روی سرور خودت (کنار ربات معامله‌گر)")
+    say("   MehranAiShabestar (مهران‌هوش شبستر) — راه‌اندازی روی سرور خودت")
     say("=" * 60)
     say("")
 
@@ -163,9 +163,10 @@ def main() -> int:
     say("")
 
     # ۴) پورت + فایروال
-    port = choose_port(int(os.environ.get("MEGA_PORT") or DEFAULT_PORT))
-    if port != DEFAULT_PORT:
-        say(f"ℹ️  پورت {DEFAULT_PORT} مشغول بود → پورت {port} انتخاب شد.")
+    wanted = int(os.environ.get("MEGA_PORT") or os.environ.get("PORT") or DEFAULT_PORT)
+    port = choose_port(wanted)
+    if port != wanted:
+        say(f"ℹ️  پورت {wanted} مشغول بود → پورت {port} انتخاب شد.")
     say(f"🚪 پورت: {port}")
     if is_windows():
         if not is_admin():
@@ -191,7 +192,9 @@ def main() -> int:
     say("=" * 60)
     say("")
 
-    env = {**os.environ, "MEGA_HOST": "0.0.0.0", "MEGA_PORT": str(port), "MEGA_NO_VENV": "1"}
+    # هر دو متغیر را ست می‌کنیم تا پورت نمایش‌داده‌شده دقیقاً همان پورت واقعی باشد
+    env = {**os.environ, "MEGA_HOST": "0.0.0.0", "MEGA_PORT": str(port),
+           "PORT": str(port), "MEGA_NO_VENV": "1"}
     try:
         return subprocess.run([py, str(ROOT / "server.py")], cwd=str(ROOT), env=env).returncode
     except KeyboardInterrupt:

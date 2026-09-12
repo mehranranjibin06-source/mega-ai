@@ -1,5 +1,5 @@
 """
-MEGA-AI  |  سرور وب (FastAPI)
+MehranAiShabestar  |  سرور وب (FastAPI)
 ------------------------------------------------
   python server.py            → http://localhost:8000
 رابط وب فارسی، اجرای زنده (SSE) و مدیریت کلیدها.
@@ -29,7 +29,7 @@ from mega.providers import clear_cache, health_check_all, list_models, test_prov
 from mega.skills import SkillBox, installed_skills, update_libraries
 from mega.telegram_bot import TelegramBot
 
-app = FastAPI(title="MEGA-AI", docs_url="/api/docs")
+app = FastAPI(title="MehranAiShabestar", docs_url="/api/docs")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 load_env()
@@ -62,7 +62,7 @@ async def _password_gate(request: Request, call_next):
     return JSONResponse(
         {"ok": False, "error": "این سرور رمز دارد. نام کاربری مهم نیست؛ فقط رمز را بزن."},
         status_code=401,
-        headers={"WWW-Authenticate": 'Basic realm="MEGA-AI"'},
+        headers={"WWW-Authenticate": 'Basic realm="MehranAiShabestar"'},
     )
 
 
@@ -850,5 +850,5 @@ if __name__ == "__main__":
     port = _listen_port()
     host = os.environ.get("MEGA_HOST", "0.0.0.0")
     shown = "localhost" if host in ("127.0.0.1", "localhost") else host
-    print(f"\n  MEGA-AI آماده است →  http://{shown}:{port}\n")
+    print(f"\n  MehranAiShabestar آماده است →  http://{shown}:{port}\n")
     uvicorn.run(app, host=host, port=port, log_level="warning")

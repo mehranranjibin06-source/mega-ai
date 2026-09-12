@@ -148,8 +148,8 @@ def make_qr(url: str, out: Path) -> bool:
     def center(y: int, text: str, f, fill) -> None:
         d.text(((W - d.textlength(text, font=f)) / 2, y), text, font=f, fill=fill)
 
-    center(92, "ابرهوش", font(64), TXT)
-    center(178, "برنامه‌ی هوش مصنوعی شما", font(34), MUTED)
+    center(92, "MehranAiShabestar", font(56), TXT)
+    center(186, "مهران‌هوش شبستر — هوش مصنوعی شخصی", font(32), MUTED)
 
     qr = qrcode.QRCode(box_size=10, border=2, error_correction=qrcode.constants.ERROR_CORRECT_M)
     qr.add_data(url)
@@ -193,7 +193,7 @@ def prepare_python(no_install: bool = False) -> str:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="اجرای ابرهوش روی لپ‌تاپ + لینک عمومی")
+    ap = argparse.ArgumentParser(description="اجرای MehranAiShabestar روی لپ‌تاپ + لینک عمومی")
     ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8000)))
     ap.add_argument("--no-server", action="store_true", help="سرور را خودت بالا آورده‌ای")
     ap.add_argument("--no-qr", action="store_true")
@@ -203,7 +203,7 @@ def main() -> int:
 
     procs: list[subprocess.Popen] = []
     log("=" * 62)
-    log("  ابرهوش — اجرای محلی + لینک عمومی (Cloudflare Tunnel)")
+    log("  MehranAiShabestar — اجرای محلی + لینک عمومی (Cloudflare Tunnel)")
     log("=" * 62)
 
     # ۰) آماده‌سازی پایتون/کتابخانه‌ها (بار اول چند دقیقه طول می‌کشد)

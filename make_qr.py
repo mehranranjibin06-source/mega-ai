@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""پوستر QR برای لینک عمومی برنامه (ابرهوش).
+"""پوستر QR برای لینک عمومی برنامه (MehranAiShabestar).
 استفاده:  python3 make_qr.py https://xxxx.trycloudflare.com [خروجی.png]
 نکته: فونت وزیرمتن از assets/fonts خوانده می‌شود؛ برای متن فارسی نیاز به libraqm است
 (در این پروژه رِشِیپینگ غیرفعال است و فونت خودش حروف را درست می‌چیند).
@@ -53,8 +53,8 @@ def build(url, out):
     f_note = font(FONT_REG, 30)
     f_foot = font(FONT_REG, 26)
 
-    center(d, 92, "ابرهوش", f_title, TXT)
-    center(d, 178, "برنامه‌ی هوش مصنوعی شما", f_sub, MUTED)
+    center(d, 92, "MehranAiShabestar", font(FONT_BOLD, 56), TXT)
+    center(d, 186, "مهران‌هوش شبستر — هوش مصنوعی شخصی", font(FONT_REG, 32), MUTED)
 
     # QR
     qr = qrcode.QRCode(version=None, box_size=10, border=2,

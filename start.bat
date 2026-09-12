@@ -2,7 +2,7 @@
 REM  MEGA-AI -- run on this computer (ASCII only). Persian UI comes from run_local.py
 chcp 65001 >nul
 cd /d "%~dp0"
-title MEGA-AI
+title MehranAiShabestar
 
 where python >nul 2>nul
 if errorlevel 1 goto nopython

@@ -3,7 +3,7 @@ REM  MEGA-AI -- run + get a public link for the phone (ASCII only).
 REM  Persian messages come from cloud_link.py
 chcp 65001 >nul
 cd /d "%~dp0"
-title MEGA-AI (cloud link)
+title MehranAiShabestar (cloud link)
 
 where python >nul 2>nul
 if errorlevel 1 goto nopython
