@@ -1,23 +1,10 @@
 @echo off
-REM  MEGA-AI -- run + get a public link for the phone (ASCII only).
-REM  Persian messages come from cloud_link.py
-chcp 65001 >nul
 cd /d "%~dp0"
-title MehranAiShabestar (cloud link)
-
 where python >nul 2>nul
-if errorlevel 1 goto nopython
-
+if errorlevel 1 goto usepy
 python cloud_link.py
-echo.
+goto end
+:usepy
+py cloud_link.py
+:end
 pause
-exit /b 0
-
-:nopython
-echo.
-echo   [!] Python not found.
-echo   Install "Python 3.11" or newer from https://www.python.org/downloads/
-echo   IMPORTANT: tick "Add python.exe to PATH" during setup.
-echo.
-pause
-exit /b 1
