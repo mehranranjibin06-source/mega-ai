@@ -145,6 +145,16 @@ def lan_ip() -> str:
     return ""
 
 
+def _can_import(py: str, mod: str) -> bool:
+    """آیا این مفسر می‌تواند ماژول را import کند؟"""
+    try:
+        r = subprocess.run([py, "-c", f"import {mod}"],
+                           capture_output=True, text=True, timeout=300)
+        return r.returncode == 0
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def main() -> int:
     _utf8_console()
     say("=" * 62, "=" * 62)
@@ -178,6 +188,7 @@ def main() -> int:
     # ۳) کتابخانه‌ها (محیط مجازی جدا؛ ربات معامله‌گر دست نمی‌خورد)
     say("📦 بررسی و نصب کتابخانه‌ها … (بار اول چند دقیقه)",
         "Installing libraries ... (first run takes a few minutes)")
+    py = sys.executable
     try:
         sys.path.insert(0, str(ROOT))
         from run_local import ensure_deps, ensure_venv  # type: ignore
@@ -186,9 +197,28 @@ def main() -> int:
     except Exception as e:  # noqa: BLE001
         say(f"⚠️  آماده‌سازی خودکار ناتمام ماند ({e})",
             f"Automatic setup did not finish ({e})")
-        say("   دستی: python -m pip install -r requirements.txt",
-            "   Manual: python -m pip install -r requirements.txt")
         py = sys.executable
+
+    # اگر با پایتون محیط مجازی نصب نشد → یک بار با پایتون سیستم امتحان کن
+    if not _can_import(py, "fastapi") and py != sys.executable:
+        say("ℹ️  نصب در .venv کامل نشد → با پایتون سیستم امتحان می‌کنم …",
+            "[i] Install into .venv did not complete -> trying the system Python ...")
+        try:
+            from mega.prereqs import ensure_all  # type: ignore
+            ensure_all(sys.executable, install=True, tools=False)
+        except Exception as e:  # noqa: BLE001
+            say(f"⚠️  نصب با پایتون سیستم هم ناتمام ماند ({e})",
+                f"[!] System-Python install also failed ({e})")
+        if _can_import(sys.executable, "fastapi"):
+            py = sys.executable
+            say("✅ با پایتون سیستم ادامه می‌دهم.", "[OK] Continuing with the system Python.")
+    if not _can_import(py, "fastapi"):
+        say("❌ کتابخانه‌ها نصب نشدند. این را در همان پنجره بزن و خروجی را بفرست:",
+            "❌ Libraries are still missing. Run this and send the output:")
+        say("   python -m pip install -r requirements.txt",
+            "   python -m pip install -r requirements.txt")
+    else:
+        say("✅ کتابخانه‌ها آماده‌اند.", "[OK] Libraries are ready.")
     say("")
 
     # ۴) پورت + فایروال

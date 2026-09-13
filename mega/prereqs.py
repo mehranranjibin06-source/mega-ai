@@ -82,8 +82,50 @@ def missing_python(py: str) -> list[str]:
         return []
 
 
+def ensure_pip(py: str) -> bool:
+    """اگر مفسر pip ندارد، با ensurepip یا get-pip نصبش می‌کند."""
+    try:
+        r = subprocess.run([py, "-m", "pip", "--version"], capture_output=True, text=True, timeout=180)
+        if r.returncode == 0:
+            return True
+    except Exception:  # noqa: BLE001
+        pass
+
+    for cmd in ([py, "-m", "ensurepip", "--upgrade", "--default-pip"],
+                [py, "-m", "ensurepip", "--upgrade"]):
+        try:
+            subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+        except Exception:  # noqa: BLE001
+            continue
+        try:
+            if subprocess.run([py, "-m", "pip", "--version"], capture_output=True,
+                              text=True, timeout=180).returncode == 0:
+                return True
+        except Exception:  # noqa: BLE001
+            pass
+
+    try:
+        import urllib.request
+        gp = ROOT / ".get-pip.py"
+        urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", gp)
+        subprocess.run([py, str(gp)], capture_output=True, text=True, timeout=1200)
+        gp.unlink(missing_ok=True)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        return subprocess.run([py, "-m", "pip", "--version"], capture_output=True,
+                              text=True, timeout=180).returncode == 0
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def install_python(py: str, packages: list[str] | None = None) -> bool:
     """نصب پکیج‌ها. اگر requirements.txt موجود باشد، همان نصب می‌شود."""
+    if not ensure_pip(py):
+        _say(T("⚠️  pip روی این پایتون نصب نشد (نه با ensurepip، نه با get-pip).",
+               "[!] Could not install pip on this Python (tried ensurepip and get-pip)."))
+        return False
+
     if packages:
         base = packages
     elif REQ.exists():

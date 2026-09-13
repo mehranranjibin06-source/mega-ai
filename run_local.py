@@ -66,8 +66,43 @@ def venv_python() -> Path:
     return d / ("Scripts/python.exe" if IS_WIN else "bin/python")
 
 
+def has_pip(py: str | Path) -> bool:
+    """آیا این مفسر pip دارد؟"""
+    try:
+        r = subprocess.run([str(py), "-m", "pip", "--version"],
+                           capture_output=True, text=True, timeout=180)
+        return r.returncode == 0
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def bootstrap_pip(py: str | Path) -> bool:
+    """pip غایب را می‌سازد: اول ensurepip، بعد get-pip.py."""
+    for cmd in ([str(py), "-m", "ensurepip", "--upgrade", "--default-pip"],
+                [str(py), "-m", "ensurepip", "--upgrade"]):
+        try:
+            subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+        except Exception:  # noqa: BLE001
+            continue
+        if has_pip(py):
+            return True
+    # آخرین راه: اسکریپت رسمی get-pip
+    try:
+        import urllib.request
+        gp = ROOT / ".get-pip.py"
+        urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", gp)
+        subprocess.run([str(py), str(gp)], capture_output=True, text=True, timeout=1200)
+        try:
+            gp.unlink()
+        except Exception:  # noqa: BLE001
+            pass
+    except Exception:  # noqa: BLE001
+        pass
+    return has_pip(py)
+
+
 def ensure_venv() -> str:
-    """اگر داخل محیط مجازی نیستیم، `.venv` می‌سازد و مسیر پایتونِ آن را برمی‌گرداند."""
+    """اگر داخل محیط مجازی نیستیم، `.venv` می‌سازد (و pip اش را تضمین می‌کند)."""
     if os.environ.get("MEGA_NO_VENV") or sys.prefix != sys.base_prefix:
         return sys.executable                        # همین حالا داخل محیط مجازی هستیم
     vp = venv_python()
@@ -79,6 +114,15 @@ def ensure_venv() -> str:
                             str(ROOT / ".venv")], check=True)
         except Exception as e:  # noqa: BLE001
             say(c(f"ساخت venv نشد ({e}) — با پایتون سیستم ادامه می‌دهم.", "y"))
+            os.environ["MEGA_NO_VENV"] = "1"
+            return sys.executable
+    # ── بعضی نصب‌های ویندوز venv را بدون pip می‌سازند → خودمان درستش می‌کنیم
+    if not has_pip(vp):
+        say(c("pip در .venv نبود — در حال نصب pip (یک‌بار) …", "y"))
+        if bootstrap_pip(vp):
+            say(c("pip نصب شد ✅", "g"))
+        else:
+            say(c("نصب pip در .venv ممکن نشد → با پایتون سیستم ادامه می‌دهم.", "y"))
             os.environ["MEGA_NO_VENV"] = "1"
             return sys.executable
     return str(vp)

@@ -52,3 +52,9 @@ Without a key it runs in demo mode. For real answers:
 
 Stop the program: close the black window (or Ctrl+C).
 Run it again: double-click start_vps.bat again.
+
+CHANGE THE PASSWORD LATER (2 steps):
+  1) open the file  .env  in this folder with Notepad
+  2) edit the line  MEGA_PASSWORD=...  and save. Restart the app.
+
+FORGOT THE PASSWORD? Just delete the .env file and run start_vps.bat again.
