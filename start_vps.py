@@ -104,6 +104,23 @@ def ask_password() -> str:
     return pw
 
 
+def force_password(pw: str) -> None:
+    """رمز را همیشه روی همین مقدار تنظیم می‌کند (خط قبلی .env را عوض می‌کند)."""
+    lines: list[str] = []
+    if ENV_PATH.exists():
+        try:
+            lines = [ln for ln in ENV_PATH.read_text(encoding="utf-8", errors="ignore").splitlines()
+                     if not ln.strip().startswith("MEGA_PASSWORD=")]
+        except Exception:  # noqa: BLE001
+            lines = []
+    lines.append(f"MEGA_PASSWORD={pw}")
+    try:
+        ENV_PATH.write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
+    except Exception as e:  # noqa: BLE001
+        say(f"⚠️  ذخیره‌ی رمز در .env ممکن نشد ({e})", f"[!] Could not write .env ({e})")
+    os.environ["MEGA_PASSWORD"] = pw
+
+
 def port_in_use(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(0.5)
@@ -177,24 +194,16 @@ def main() -> int:
         return 1
     say("")
 
-    # ۲) رمز — همیشه «mehran» (دیگر نمی‌پرسد)
-    pw = read_password()
-    if not pw:
-        pw = DEFAULT_PASSWORD
-        try:
-            with ENV_PATH.open("a", encoding="utf-8") as f:
-                f.write(f"\nMEGA_PASSWORD={pw}\n")
-        except Exception:  # noqa: BLE001
-            pass
-        say(f"🔐 رمز تنظیم شد: {pw}", f"[OK] Password set to: {pw}")
+    # ۲) رمز — همیشه «mehran» (حتی اگر قبلاً رمز دیگری بوده، عوض می‌شود)
+    old = read_password()
+    force_password(DEFAULT_PASSWORD)
+    if old and old != DEFAULT_PASSWORD:
+        say(f"🔐 رمز از «{old}» به {DEFAULT_PASSWORD} تغییر کرد ✅",
+            f"[OK] Password changed to: {DEFAULT_PASSWORD}")
     else:
-        say(f"🔐 رمز فعال است: {pw}", f"[OK] Password: {pw}")
-
-    if len(pw) < 4:
-        say("⚠️  رمز کوتاه است — بهتر است عوضش کنی.",
-            "[!] Password is short - consider changing it.")
+        say(f"🔐 رمز: {DEFAULT_PASSWORD} ✅", f"[OK] Password: {DEFAULT_PASSWORD}")
+    pw = DEFAULT_PASSWORD
     say("")
-    os.environ["MEGA_PASSWORD"] = pw
 
     # ۳) کتابخانه‌ها (محیط مجازی جدا؛ ربات معامله‌گر دست نمی‌خورد)
     say("📦 بررسی و نصب کتابخانه‌ها … (بار اول چند دقیقه)",
