@@ -19,6 +19,7 @@ import os
 import socket
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -119,6 +120,56 @@ def force_password(pw: str) -> None:
     except Exception as e:  # noqa: BLE001
         say(f"⚠️  ذخیره‌ی رمز در .env ممکن نشد ({e})", f"[!] Could not write .env ({e})")
     os.environ["MEGA_PASSWORD"] = pw
+
+
+def start_heavy_install(py: str) -> None:
+    """کتابخانه‌های سنگین (پانداس/نمودار) را در پس‌زمینه نصب می‌کند.
+
+    چرا پس‌زمینه؟ روی اینترنت ضعیف دانلود ~۴۰ مگابایت طول می‌کشد؛ این‌طور
+    برنامه همان لحظه بالا می‌آید و کاربر می‌تواند استفاده کند. اگر نت قطع شد،
+    pip فایل‌های نیمه‌دانلود‌شده را در کش نگه می‌دارد و دفعهٔ بعد ادامه می‌دهد.
+    """
+    if os.environ.get("MEGA_SKIP_EXTRAS"):
+        return
+    try:
+        sys.path.insert(0, str(ROOT))
+        from mega.prereqs import PIP_INDEXES, ascii_requirements, missing_python  # type: ignore
+        if not missing_python(py, "extra"):
+            return
+    except Exception:  # noqa: BLE001
+        return
+
+    def work() -> None:
+        req = ascii_requirements()
+        args = ["-r", str(req)] if req else list(missing_python(py, "extra"))
+        log_dir = ROOT / "logs"
+        log_dir.mkdir(exist_ok=True)
+        with (log_dir / "extras-install.log").open("a", encoding="utf-8", errors="replace") as log:
+            for _round in range(2):
+                for index in PIP_INDEXES:
+                    cmd = [py, "-m", "pip", "install", "--upgrade", "--quiet",
+                           "--retries", "20", "--timeout", "60", "--prefer-binary",
+                           "--index-url", index, *args]
+                    try:
+                        rc = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT,
+                                            timeout=3600).returncode
+                    except Exception:  # noqa: BLE001
+                        rc = 1
+                    if rc == 0 and not missing_python(py, "extra"):
+                        say("✅ کتابخانه‌های سنگین هم نصب شدند (اکسل/نمودار/PDF آماده).",
+                            "[OK] Heavy libraries installed (Excel/charts/PDF ready).")
+                        return
+        say("⚠️  کتابخانه‌های سنگین نیمه‌کاره ماند (اینترنت قطع شد؟). با اجرای بعدی، "
+            "از همان‌جا که مانده ادامه می‌دهد — چیزی دوباره دانلود نمی‌شود.",
+            "[!] Heavy libraries partly installed (connection dropped?). The next run "
+            "resumes from where it stopped - nothing is downloaded twice.")
+
+    say("🔎 کتابخانه‌های سنگین (اکسل/نمودار/PDF) در پس‌زمینه دانلود می‌شوند.",
+        "[i] Heavy libraries (Excel/charts/PDF) are downloading in the background.")
+    say("   همین حالا می‌توانی از برنامه استفاده کنی — این پنجره را نبند.",
+        "    You can use the app right now - just keep this window open.")
+    say("")
+    threading.Thread(target=work, daemon=True).start()
 
 
 def port_in_use(port: int) -> bool:
@@ -262,6 +313,8 @@ def main() -> int:
     say("")
 
     # ۵) اجرا
+    start_heavy_install(py)
+
     ip = lan_ip()
     say("=" * 62, "=" * 62)
     say("  🚀 برنامه اجرا شد! این پنجره را باز بگذار.",
