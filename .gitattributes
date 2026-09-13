@@ -1,5 +1,5 @@
-# فایل‌های ویندوزی باید دست‌نخورده (با CRLF) ذخیره شوند — وگرنه cmd.exe خراب می‌خواند
+# Keep Windows .bat files exactly as they are (CRLF line endings for cmd.exe)
 *.bat -text
 *.cmd -text
-# اسکریپت‌های شل با پایان‌خط لینوکسی
+# Shell scripts use LF
 *.sh text eol=lf
