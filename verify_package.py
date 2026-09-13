@@ -69,6 +69,34 @@ for b in bats:
     ok(f"{b.name}: بدون BOM", not bom)
     ok(f"{b.name}: کوتاه و ساده", len(lines) <= 20, f"{len(lines)} خط")
 
+# ── ۲.۵) فایل‌های متنی که pip/ویندوز می‌خوانند باید ASCII باشند
+# (باگ واقعی: pip فایل requirements را با cp1252 می‌خواند و با کامنت فارسی می‌ترکد)
+print("\n۲.۵) فایل‌های متنی حساس (کدپیج ویندوز)")
+for rel in ("requirements.txt", "README-FIRST.txt", ".gitattributes"):
+    p = ROOT / rel
+    if not p.exists():
+        continue
+    raw = p.read_bytes()
+    nonascii = sum(1 for b in raw if b > 127)
+    if nonascii:
+        # برای فایل‌هایی که کد از آن‌ها محافظت می‌کند اشکالی ندارد، ولی باید هشدار بدهیم
+        if rel == "requirements.txt":
+            ok(f"{rel} فقط ASCII است (وگرنه pip روی ویندوز می‌ترکد)", False,
+               f"{nonascii} بایت غیر-ASCII")
+        else:
+            warn(f"{rel} بایت غیر-ASCII دارد", str(nonascii))
+    else:
+        ok(f"{rel} فقط ASCII است", True)
+# کد پایتون همیشه باید UTF-8 سالم باشد
+badpy = []
+for f in ROOT.rglob("*.py"):
+    try:
+        f.read_bytes().decode("utf-8")
+    except Exception:  # noqa: BLE001
+        badpy.append(str(f.relative_to(ROOT)))
+ok("همه‌ی فایل‌های پایتون UTF-8 سالم‌اند", not badpy, ", ".join(badpy[:3]))
+
+
 # ── ۳) فایل‌هایی که bat صدا می‌زند موجودند؟
 print("\n۳) وابستگی فایل‌های bat")
 for b in bats:

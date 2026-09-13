@@ -119,6 +119,26 @@ def ensure_pip(py: str) -> bool:
         return False
 
 
+def ascii_requirements() -> Path | None:
+    """یک کپی ASCII خالص از requirements.txt می‌سازد.
+
+    چرا؟ pip فایل requirements را با کدپیج ویندوز (cp1252) می‌خواند و اگر در آن
+    حرف فارسی باشد با UnicodeDecodeError می‌ترکد. پس همیشه نسخه‌ی ASCII می‌دهیم.
+    """
+    if not REQ.exists():
+        return None
+    if REQ.read_bytes().isascii():
+        return REQ                                    # خودش ASCII است → دست نزن
+    text = REQ.read_text(encoding="utf-8", errors="ignore")
+    clean = "\n".join("".join(ch for ch in line if ord(ch) < 128).rstrip()
+                      for line in text.splitlines())
+    import tempfile
+    fd, name = tempfile.mkstemp(prefix="mega-req-", suffix=".txt")
+    with os.fdopen(fd, "w", encoding="ascii", errors="ignore") as f:
+        f.write(clean + "\n")
+    return Path(name)
+
+
 def install_python(py: str, packages: list[str] | None = None) -> bool:
     """نصب پکیج‌ها. اگر requirements.txt موجود باشد، همان نصب می‌شود."""
     if not ensure_pip(py):
@@ -128,10 +148,9 @@ def install_python(py: str, packages: list[str] | None = None) -> bool:
 
     if packages:
         base = packages
-    elif REQ.exists():
-        base = ["-r", str(REQ)]
     else:
-        base = list(dict.fromkeys(PY_DEPS.values()))
+        req_file = ascii_requirements()
+        base = ["-r", str(req_file)] if req_file else list(dict.fromkeys(PY_DEPS.values()))
 
     quiet = "1" if os.environ.get("MEGA_NO_VENV") else None
     for i, index in enumerate(PIP_INDEXES, 1):
