@@ -24,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 ENV_PATH = ROOT / ".env"
 DEFAULT_PORT = 8000
+DEFAULT_PASSWORD = "mehran"          # ← رمز پیش‌فرض (خواستهٔ خودت)
 
 # ── زبان کنسول ────────────────────────────────────────────────────────
 FORCE = (os.environ.get("MEGA_LANG") or "").strip().lower()
@@ -176,13 +177,23 @@ def main() -> int:
         return 1
     say("")
 
-    # ۲) رمز
+    # ۲) رمز — همیشه «mehran» (دیگر نمی‌پرسد)
     pw = read_password()
-    if pw:
-        say("🔐 رمز فعال است ✅", "[OK] Password is set")
-        say("")
+    if not pw:
+        pw = DEFAULT_PASSWORD
+        try:
+            with ENV_PATH.open("a", encoding="utf-8") as f:
+                f.write(f"\nMEGA_PASSWORD={pw}\n")
+        except Exception:  # noqa: BLE001
+            pass
+        say(f"🔐 رمز تنظیم شد: {pw}", f"[OK] Password set to: {pw}")
     else:
-        pw = ask_password()
+        say(f"🔐 رمز فعال است: {pw}", f"[OK] Password: {pw}")
+
+    if len(pw) < 4:
+        say("⚠️  رمز کوتاه است — بهتر است عوضش کنی.",
+            "[!] Password is short - consider changing it.")
+    say("")
     os.environ["MEGA_PASSWORD"] = pw
 
     # ۳) کتابخانه‌ها (محیط مجازی جدا؛ ربات معامله‌گر دست نمی‌خورد)
