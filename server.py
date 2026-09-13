@@ -250,6 +250,13 @@ async def set_keys(payload: dict):
     raw = str(payload.get("key") or "").strip()
     if raw:                                   # یک مقدار ساده: خودش تشخیص می‌دهد
         for part in raw.replace(",", " ").split():
+            if re.fullmatch(r"[0-9a-fA-F]{32}", part):
+                pairs["CLOUDFLARE_ACCOUNT_ID"] = part.lower()
+                continue
+            _u = re.search(r"/([0-9a-fA-F]{32})(?:/|$|\?)", part)
+            if _u and ("." in part or "/" in part):   # آدرس داشبورد را چسبانده → شناسهٔ حساب
+                pairs["CLOUDFLARE_ACCOUNT_ID"] = _u.group(1).lower()
+                continue
             pairs[_detect_key(part)] = part
     for k, v in payload.items():              # حالت قدیمی: {"AVALAI_API_KEY": "..."}
         if isinstance(k, str) and k.lower() != "key" and str(v).strip():
