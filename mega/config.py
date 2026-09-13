@@ -448,6 +448,37 @@ def _csv(name: str) -> list[str]:
 # مدل‌های پرووایدر سفارشی (اگر کاربر مشخص کرده باشد)
 CUSTOM_MODELS: list[str] = _csv("CUSTOM_MODELS")
 
+# ─────────── سرویس‌های رایگان (بدون کارت بانکی) ───────────
+PROVIDERS["groq"] = Provider(
+    "groq", "Groq — رایگان و بسیار سریع (بدون کارت)", "openai",
+    "https://api.groq.com/openai/v1", "GROQ_API_KEY",
+    ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3-32b", "llama-3.3-70b-versatile"],
+    "https://console.groq.com/keys",
+)
+
+PROVIDERS["openrouter"] = Provider(
+    "openrouter", "OpenRouter — مدل‌های رایگان (بدون کارت)", "openai",
+    "https://openrouter.ai/api/v1", "OPENROUTER_API_KEY",
+    ["openai/gpt-oss-120b:free", "openai/gpt-oss-20b:free", "qwen/qwen3-coder:free",
+     "google/gemma-3-27b-it:free", "deepseek/deepseek-r1:free"],
+    "https://openrouter.ai/keys",
+)
+
+PROVIDERS["mistral"] = Provider(
+    "mistral", "Mistral — حالت رایگان (بدون کارت)", "openai",
+    "https://api.mistral.ai/v1", "MISTRAL_API_KEY",
+    ["mistral-small-latest", "mistral-medium-latest", "codestral-latest", "mistral-large-latest"],
+    "https://console.mistral.ai/api-keys",
+)
+
+PROVIDERS["cloudflare"] = Provider(
+    "cloudflare", "Cloudflare Workers AI — رایگان روزانه (بدون کارت)", "openai",
+    "https://api.cloudflare.com/client/v4/accounts/ACCOUNT_ID/ai/v1", "CLOUDFLARE_API_TOKEN",
+    ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/openai/gpt-oss-120b",
+     "@cf/meta/llama-3.1-8b-instruct-fp8-fast", "@cf/qwen/qwen3-32b"],
+    "https://dash.cloudflare.com/profile/api-tokens",
+)
+
 # پرووایدر سفارشی: هر آدرس سازگار با OpenAI (گیت‌وی دیگر، Ollama، vLLM، LM Studio…)
 PROVIDERS["custom"] = Provider(
     "custom", "سفارشی (هر آدرس سازگار با OpenAI)", "openai",
@@ -464,5 +495,12 @@ for _p in PROVIDERS.values():
             _p.custom_base = env_base.rstrip("/")     # گیت‌وی/مدل سفارشی
         else:
             _p.base_url = env_base.rstrip("/")
+
+# Cloudflare: شناسه حساب از .env خوانده می‌شود
+_cf_id = (os.environ.get("CLOUDFLARE_ACCOUNT_ID") or "").strip()
+if _cf_id:
+    PROVIDERS["cloudflare"].base_url = (
+        f"https://api.cloudflare.com/client/v4/accounts/{_cf_id}/ai/v1")
+_providers_free = tuple(k for k in ("groq", "openrouter", "mistral", "cloudflare") if k in PROVIDERS)
 
 SETTINGS = Settings.from_env()
