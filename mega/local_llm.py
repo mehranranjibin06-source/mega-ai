@@ -40,10 +40,35 @@ def _get(url: str) -> dict:
         return json.loads(r.read().decode("utf-8", "replace"))
 
 
+def _probe(base: str, path: str, keysrc: str, keyname: str) -> list[str]:
+    data = _get(base.rstrip("/") + path)
+    items = data.get(keysrc) or []
+    return [m.get(keyname) for m in items if isinstance(m, dict) and m.get(keyname)]
+
+
 def detect() -> dict | None:
-    """اگر هوش محلی پیدا شد، آدرس و مدل‌هایش را برمی‌گرداند."""
+    """اگر هوش محلی پیدا شد، آدرس و مدل‌هایش را برمی‌گرداند.
+
+    MEGA_LOCAL_URL = آدرس هوشی که روی کامپیوتر دیگری است (مثلاً کامپیوتر خودت
+    که با تونل به سرور وصل شده). مثال:  set MEGA_LOCAL_URL=http://127.0.0.1:11434
+    """
     if (os.environ.get("MEGA_NO_LOCAL") or "").strip() in {"1", "true", "yes"}:
         return None
+
+    remote = (os.environ.get("MEGA_LOCAL_URL") or os.environ.get("OLLAMA_HOST") or "").strip()
+    if remote:
+        if not remote.startswith("http"):
+            remote = "http://" + remote
+        for path, keysrc, keyname in (("/api/tags", "models", "name"), ("/v1/models", "data", "id")):
+            try:
+                models = _probe(remote, path, keysrc, keyname)
+                if models:
+                    api = remote.rstrip("/") + ("/v1" if path.startswith("/api") else "")
+                    return {"kind": "Remote " + remote.split("//")[-1], "base_url": api,
+                            "models": models[:20]}
+            except Exception:  # noqa: BLE001
+                continue
+
     for name, base, path, keysrc, keyname in CANDIDATES:
         try:
             data = _get(base + path)
