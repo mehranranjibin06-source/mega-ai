@@ -173,6 +173,9 @@ async def _pick_from_provider(provider_id: str, prefs: list[str],
     exclude = exclude or set()
     available = [m for m in await list_models(provider_id)
                  if f"{provider_id}:{m}" not in exclude and not any(b in m.lower() for b in _JUNK)]
+    if not available:
+        # سرویس فهرست مدل‌ها را نمی‌دهد (مثل Cloudflare) → از مدل‌های پیشنهادی همان سرویس استفاده کن
+        available = [m for m in prefs if m]
     out: list[str] = []
 
     def add(m: str) -> None:

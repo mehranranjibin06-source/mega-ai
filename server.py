@@ -178,8 +178,22 @@ async def _verify_provider(pid: str) -> dict:
     p = PROVIDERS.get(pid)
     if not p or not p.configured:
         return {"ok": False, "detail": "کلید خالی است"}
+    if pid == "cloudflare" and not (os.environ.get("CLOUDFLARE_ACCOUNT_ID") or "").strip():
+        return {"ok": False, "detail": "شناسهٔ حساب (Account ID) پیدا نشد — آن را هم بفرست"}
     try:
         import httpx
+        if pid == "cloudflare":          # تست واقعی با یک پیام کوتاه
+            async with httpx.AsyncClient(timeout=25) as c:
+                r = await c.post(p.api_base.rstrip("/") + "/chat/completions",
+                                 headers={"Authorization": f"Bearer {p.key}"},
+                                 json={"model": (p.default_models or ["@cf/meta/llama-3.1-8b-instruct-fp8-fast"])[0],
+                                       "messages": [{"role": "user", "content": "سلام"}],
+                                       "max_tokens": 5})
+            if r.status_code == 200:
+                return {"ok": True, "detail": "توکن سالم است و پاسخ داد"}
+            if r.status_code in (401, 403):
+                return {"ok": False, "detail": "توکن پذیرفته نشد — دوباره کپی کن"}
+            return {"ok": False, "detail": f"پاسخ سرور: {r.status_code}"}
         url = p.api_base.rstrip("/") + "/models"
         headers = {"Authorization": f"Bearer {p.key}"}
         async with httpx.AsyncClient(timeout=20) as c:
@@ -194,10 +208,60 @@ async def _verify_provider(pid: str) -> dict:
         return {"ok": False, "detail": f"ارتباط برقرار نشد: {type(e).__name__}"}
 
 
+def _detect_key(value: str) -> str:
+    """از شکلِ کلید می‌فهمد مربوط به کدام سرویس است (کاربر لازم نیست چیزی انتخاب کند)."""
+    v = value.strip()
+    low = v.lower()
+    if low.startswith("aa-"):
+        return "AVALAI_API_KEY"
+    if low.startswith("gsk_"):
+        return "GROQ_API_KEY"
+    if low.startswith("sk-or-") or low.startswith("sk-or-v1"):
+        return "OPENROUTER_API_KEY"
+    if low.startswith("sk-"):
+        return "GAPGPT_API_KEY"
+    if len(v) == 32 and all(c in "0123456789abcdefABCDEFabcdef" for c in v):
+        return "CLOUDFLARE_ACCOUNT_ID"
+    if len(v) >= 35 and all(c.isalnum() or c in "_-" for c in v):
+        return "CLOUDFLARE_API_TOKEN"     # توکن ۴۰ کاراکتری Cloudflare
+    return "GAPGPT_API_KEY"
+
+
+async def _discover_cf_account(token: str) -> tuple[str, str]:
+    """شناسهٔ حساب Cloudflare را بدون دخالت کاربر از خود سرویس می‌گیرد."""
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=20) as c:
+            r = await c.get("https://api.cloudflare.com/client/v4/accounts",
+                            headers={"Authorization": f"Bearer {token}"})
+        data = r.json() or {}
+        res = data.get("result") or []
+        if r.status_code == 200 and res:
+            return str(res[0].get("id") or ""), str(res[0].get("name") or "")
+    except Exception:  # noqa: BLE001
+        pass
+    return "", ""
+
+
 @app.post("/api/keys")
 async def set_keys(payload: dict):
     from mega import demo_model
-    save_keys({k.upper(): str(v) for k, v in payload.items() if isinstance(k, str)})
+    pairs: dict[str, str] = {}
+    raw = str(payload.get("key") or "").strip()
+    if raw:                                   # یک مقدار ساده: خودش تشخیص می‌دهد
+        for part in raw.replace(",", " ").split():
+            pairs[_detect_key(part)] = part
+    for k, v in payload.items():              # حالت قدیمی: {"AVALAI_API_KEY": "..."}
+        if isinstance(k, str) and k.lower() != "key" and str(v).strip():
+            pairs[k.upper()] = str(v).strip()
+    save_keys(pairs)
+
+    note = ""
+    if pairs.get("CLOUDFLARE_API_TOKEN") and not (os.environ.get("CLOUDFLARE_ACCOUNT_ID") or "").strip():
+        _acc_id, _acc_name = await _discover_cf_account(pairs["CLOUDFLARE_API_TOKEN"])
+        if _acc_id:
+            save_keys({"CLOUDFLARE_ACCOUNT_ID": _acc_id})
+            note = f" — شناسهٔ حساب خودکار پیدا شد ({_acc_name or _acc_id[:8]})"
     if configured_providers():
         demo_model.disable()          # کلید واقعی آمد → مدل نمایشی کنار می‌رود
     verified = {}
@@ -210,7 +274,9 @@ async def set_keys(payload: dict):
         msg = "❌ کلید ذخیره شد ولی تست نشد: " + "؛ ".join(
             f"{k}: {v.get('detail','')}" for k, v in verified.items())
     else:
-        msg = "کلید ذخیره شد."
+        msg = "کلید ذخیره شد." + note
+    if good:
+        msg += note
     return {"ok": True, "active": [p.id for p in configured_providers()],
             "providers": key_status(), "demo_model": demo_model.BRIDGE["active"],
             "verified": verified, "message": msg}

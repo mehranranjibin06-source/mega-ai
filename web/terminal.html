@@ -50,7 +50,7 @@
       کلید هوش را همین‌جا پیست کن (از avalai.ir یا gapgpt.app — راهنما: <a href="/guide" style="color:#6fb1ff">اینجا</a>)
     </div>
     <div style="display:flex; gap:8px">
-      <input id="ky" placeholder="aa-...  یا  sk-..." style="flex:1; background:#07090c; border:1px solid #24313d; color:#e8f0f5; border-radius:8px; padding:10px; font-family:inherit; direction:ltr">
+      <input id="ky" placeholder="کلید رایگان را بچسبان (Cloudflare / Groq / OpenRouter / AvalAI)" style="flex:1; background:#07090c; border:1px solid #24313d; color:#e8f0f5; border-radius:8px; padding:10px; font-family:inherit; direction:ltr">
       <button id="ks" style="background:#1f6feb;border:0;color:#fff;border-radius:8px;padding:10px 16px;font-family:inherit">ذخیره</button>
     </div>
     <div id="km" class="dim" style="font-size:13px; margin-top:6px"></div>
@@ -149,7 +149,8 @@ document.getElementById('ks').onclick = async () => {
   const m = document.getElementById('km');
   if (!k) { m.textContent = 'کلید خالی است'; return; }
   m.textContent = '… در حال تست کلید';
-  const body = k.startsWith('aa-') ? { AVALAI_API_KEY: k } : { GAPGPT_API_KEY: k };
+  // سرور خودش نوع کلید را می‌فهمد؛ اگر توکن و شناسهٔ حساب را با فاصله پشت‌سرهم بچسبانی هر دو ذخیره می‌شوند
+  const body = { key: k };
   try {
     const r = await fetch('/api/keys', { method:'POST', credentials:'same-origin',
       headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });

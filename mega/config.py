@@ -60,6 +60,7 @@ def save_keys(pairs: dict[str, str]) -> None:
         encoding="utf-8",
     )
     os.chmod(ENV_PATH, 0o600)
+    apply_env_bases()
 
 
 # ---------------------------------------------------------------- providers
@@ -501,6 +502,21 @@ _cf_id = (os.environ.get("CLOUDFLARE_ACCOUNT_ID") or "").strip()
 if _cf_id:
     PROVIDERS["cloudflare"].base_url = (
         f"https://api.cloudflare.com/client/v4/accounts/{_cf_id}/ai/v1")
+def apply_env_bases() -> None:
+    """آدرس‌ها را دوباره از متغیرهای محیطی می‌سازد (بعد از ذخیرهٔ کلید صدا زده می‌شود)."""
+    for _p in PROVIDERS.values():
+        env_base = os.environ.get(f"{_p.id.upper()}_BASE_URL")
+        if env_base:
+            if _p.id == "custom":
+                _p.custom_base = env_base.rstrip("/")
+            else:
+                _p.base_url = env_base.rstrip("/")
+    _cid = (os.environ.get("CLOUDFLARE_ACCOUNT_ID") or "").strip()
+    if _cid:
+        PROVIDERS["cloudflare"].base_url = (
+            f"https://api.cloudflare.com/client/v4/accounts/{_cid}/ai/v1")
+
+
 _providers_free = tuple(k for k in ("groq", "openrouter", "mistral", "cloudflare") if k in PROVIDERS)
 
 SETTINGS = Settings.from_env()

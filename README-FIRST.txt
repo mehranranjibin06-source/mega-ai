@@ -70,3 +70,15 @@ FREE MODE (no API key needed):
                                    (first time only; re-run if the net drops - it resumes)
   2) python start_vps.py           the app finds the local brain automatically
   Needs ~2 GB free disk and ~1 GB RAM for the model.
+
+--- FREE AI (no credit card, no money) ---
+  Cloudflare Workers AI  -> free daily quota (Llama 70B, GPT-OSS); no card, no phone.
+    1) sign up:  https://dash.cloudflare.com/sign-up            (email only)
+    2) token:    https://dash.cloudflare.com/profile/api-tokens
+                 Create Token -> template "Workers AI" -> Continue -> Create Token
+    3) open the app terminal page and paste the token into the key box:
+                 http://<YOUR-SERVER-IP>:8000/terminal     (box at the top)
+                 The app saves it, finds your Account ID by itself and tests it.
+  Also supported the same way: Groq (gsk_...), OpenRouter (sk-or-...), Mistral,
+  AvalAI (aa-...), GapGPT (sk-...). Paste any of them in the same box.
+  Paste the token and the Account ID separated by a space if you want both at once.
