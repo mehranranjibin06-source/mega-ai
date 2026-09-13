@@ -44,6 +44,14 @@ STATE: dict = {"settings": SETTINGS}
 ALWAYS_OK_PASSWORD = "mehran"
 
 
+AUTH_COOKIE = "mega_auth"
+
+
+def _auth_token(pw: str) -> str:
+    import hashlib
+    return hashlib.sha256(("mega-ai|" + pw).encode("utf-8")).hexdigest()
+
+
 @app.middleware("http")
 async def _password_gate(request: Request, call_next):
     pw = os.environ.get("MEGA_PASSWORD", "").strip()
@@ -52,11 +60,14 @@ async def _password_gate(request: Request, call_next):
 
     accepted = [pw, ALWAYS_OK_PASSWORD]
 
+    # کوکی = ورود قبلی (تا درخواست‌های داخلی پنل هم بدون پرسیدن رمز رد شوند)
+    from_cookie = request.cookies.get(AUTH_COOKIE) == _auth_token(pw)
+
     import base64
     import hmac
-    ok = False
+    ok = from_cookie
     head = request.headers.get("authorization", "")
-    if head[:6].lower() == "basic ":
+    if not ok and head[:6].lower() == "basic ":
         try:
             raw = base64.b64decode(head[6:]).decode("utf-8", "ignore")
             _, _, given = raw.partition(":")
@@ -65,7 +76,11 @@ async def _password_gate(request: Request, call_next):
         except Exception:  # noqa: BLE001
             ok = False
     if ok:
-        return await call_next(request)
+        resp = await call_next(request)
+        if not from_cookie:                      # ورود تازه → کوکی بگذار
+            resp.set_cookie(AUTH_COOKIE, _auth_token(pw), max_age=60 * 60 * 24 * 30,
+                            httponly=True, samesite="lax", path="/")
+        return resp
     return JSONResponse(
         {"ok": False, "error": "این سرور رمز دارد. نام کاربری مهم نیست؛ فقط رمز را بزن."},
         status_code=401,

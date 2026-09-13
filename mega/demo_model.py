@@ -12,6 +12,7 @@ MEGA-AI  |  مدل نمایشی داخلی (Demo Model)
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
@@ -474,7 +475,18 @@ async def completions(request: Request, body: dict):
         return g
     system = next((m.get("content", "") for m in body.get("messages", []) if m.get("role") == "system"), "")
     model = body.get("model") or "demo-gpt"
-    text = answer(role_of(system), body, model)
+    role = role_of(system)
+    text = ""
+    # ── اول سرویس رایگان و بدون کلید را امتحان کن (پاسخ واقعی) ──
+    if role == "chat":
+        try:
+            from . import free_ai
+            if free_ai.enabled():
+                text = await asyncio.to_thread(free_ai.chat, body.get("messages") or [])
+        except Exception:  # noqa: BLE001
+            text = ""
+    if not text:
+        text = answer(role, body, model)
     if body.get("stream"):
         return sse(text)
     return {"choices": [{"message": {"role": "assistant", "content": text}}],

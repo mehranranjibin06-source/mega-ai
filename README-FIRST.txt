@@ -58,3 +58,9 @@ CHANGE THE PASSWORD LATER (2 steps):
   2) edit the line  MEGA_PASSWORD=...  and save. Restart the app.
 
 FORGOT THE PASSWORD? Just delete the .env file and run start_vps.bat again.
+
+FREE MODE (no API key needed):
+  The app automatically tries free keyless services (text + image generation).
+  Text answers from free services can be slow or rate-limited on busy hours.
+  For fast, stable answers: open the panel -> Keys -> paste a free API key
+  (Iranian gateways like AvalAI / GapGPT give free credit in ~2 minutes).
