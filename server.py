@@ -129,6 +129,12 @@ async def index():
     return FileResponse(simple if simple.exists() else WEB_DIR / "index.html")
 
 
+@app.get("/guide")
+async def guide():
+    """راهنمای ۲ دقیقه‌ای گرفتن کلید (فارسی، با لینک مستقیم)."""
+    return FileResponse(WEB_DIR / "guide.html")
+
+
 @app.get("/terminal")
 async def terminal():
     """ترمینال: خواسته را فارسی مینویسی، کارگزار واقعاً انجام میدهد."""
@@ -167,14 +173,47 @@ async def health():
     }
 
 
+async def _verify_provider(pid: str) -> dict:
+    """کلید را واقعاً تست می‌کند تا کاربر بداند کار می‌کند یا نه."""
+    p = PROVIDERS.get(pid)
+    if not p or not p.configured:
+        return {"ok": False, "detail": "کلید خالی است"}
+    try:
+        import httpx
+        url = p.api_base.rstrip("/") + "/models"
+        headers = {"Authorization": f"Bearer {p.key}"}
+        async with httpx.AsyncClient(timeout=20) as c:
+            r = await c.get(url, headers=headers)
+        if r.status_code == 200:
+            n = len((r.json() or {}).get("data") or [])
+            return {"ok": True, "detail": f"کلید سالم است ({n} مدل در دسترس)"}
+        if r.status_code in (401, 403):
+            return {"ok": False, "detail": "کلید پذیرفته نشد — دوباره کپی کن"}
+        return {"ok": False, "detail": f"پاسخ سرور: {r.status_code}"}
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "detail": f"ارتباط برقرار نشد: {type(e).__name__}"}
+
+
 @app.post("/api/keys")
 async def set_keys(payload: dict):
     from mega import demo_model
     save_keys({k.upper(): str(v) for k, v in payload.items() if isinstance(k, str)})
     if configured_providers():
         demo_model.disable()          # کلید واقعی آمد → مدل نمایشی کنار می‌رود
+    verified = {}
+    for pid in [p.id for p in configured_providers() if p.real_key]:
+        verified[pid] = await _verify_provider(pid)
+    good = [pid for pid, v in verified.items() if v.get("ok")]
+    if good:
+        msg = "✅ کلید کار می‌کند: " + ", ".join(good)
+    elif verified:
+        msg = "❌ کلید ذخیره شد ولی تست نشد: " + "؛ ".join(
+            f"{k}: {v.get('detail','')}" for k, v in verified.items())
+    else:
+        msg = "کلید ذخیره شد."
     return {"ok": True, "active": [p.id for p in configured_providers()],
-            "providers": key_status(), "demo_model": demo_model.BRIDGE["active"]}
+            "providers": key_status(), "demo_model": demo_model.BRIDGE["active"],
+            "verified": verified, "message": msg}
 
 
 @app.get("/api/models")
