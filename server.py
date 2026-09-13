@@ -129,6 +129,12 @@ async def index():
     return FileResponse(simple if simple.exists() else WEB_DIR / "index.html")
 
 
+@app.get("/terminal")
+async def terminal():
+    """ترمینال: خواسته را فارسی مینویسی، کارگزار واقعاً انجام میدهد."""
+    return FileResponse(WEB_DIR / "terminal.html")
+
+
 @app.get("/advanced")
 async def advanced():
     """رابط کامل حرفه‌ای."""
