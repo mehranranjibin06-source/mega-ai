@@ -53,8 +53,18 @@ PIP_INDEXES = (
 )
 
 
+_FORCE_LANG = (os.environ.get("MEGA_LANG") or "").strip().lower()
+_FA = _FORCE_LANG == "fa" or (_FORCE_LANG != "en" and os.name != "nt")
+
+
 def _say(text: str) -> None:
+    """پیام خام (معمولاً خروجی pip)."""
     print(text, flush=True)
+
+
+def T(fa: str, en: str) -> str:
+    """پیام دوزبانه: ویندوز انگلیسی (فونت کنسول فارسی را نشان نمی‌دهد)، بقیه فارسی."""
+    return fa if _FA else en
 
 
 def missing_python(py: str) -> list[str]:
@@ -138,14 +148,25 @@ def install_tools(auto: bool = True) -> dict:
     if not cmd:
         return done
 
-    _say(f"   نصب خودکار ffmpeg: {' '.join(cmd[:3])} …")
+    _say(T("   نصب خودکار ffmpeg …", "   auto-installing ffmpeg ..."))
     try:
         r = subprocess.run(cmd, timeout=1800)
         done["ffmpeg"] = (r.returncode == 0 and not missing_tools())
     except Exception as e:  # noqa: BLE001
-        _say(f"   ⚠️  نصب خودکار ابزارها انجام نشد: {e}")
+        _say(T(f"   ⚠️  نصب خودکار ابزارها انجام نشد: {e}", f"   [!] auto-install failed: {e}"))
         done["ffmpeg"] = False
     return done
+
+
+def tool_hint_en(name: str) -> str:
+    """همان راهنما به انگلیسی (برای کنسول ویندوز)."""
+    if name == "ffmpeg":
+        if os.name == "nt":
+            return ("video/audio needs it. In an admin PowerShell run:  "
+                    "winget install -e --id Gyan.FFmpeg   "
+                    "(or download from https://www.gyan.dev/ffmpeg/builds/ and add its bin folder to PATH)")
+        return "install:  sudo apt install ffmpeg   (or: brew install ffmpeg)"
+    return ""
 
 
 def ensure_all(py: str, install: bool = True, tools: bool = True) -> dict:
@@ -157,19 +178,19 @@ def ensure_all(py: str, install: bool = True, tools: bool = True) -> dict:
 
     missing = missing_python(py)
     if not missing:
-        _say("📦 کتابخانه‌های پایتون: همه نصب‌اند ✅")
+        _say(T("📦 کتابخانه‌های پایتون: همه نصب‌اند ✅", "[OK] Python libraries: all installed"))
     else:
-        _say("📦 کتابخانه‌های غایب: " + ", ".join(missing))
+        _say(T("📦 کتابخانه‌های غایب: ", "Missing libraries: ") + ", ".join(missing))
         if install:
-            _say("   در حال نصب … (بار اول چند دقیقه)")
+            _say(T("   در حال نصب … (بار اول چند دقیقه)", "   installing ... (first run takes a few minutes)"))
             ok = install_python(py)
             rest = missing_python(py)
             result["installed"] = ok and not rest
             result["missing_pkgs"] = rest
-            _say("   ✅ نصب شد" if not rest else "   ⚠️  این‌ها نصب نشد: " + ", ".join(rest))
+            _say(T("   ✅ نصب شد", "   [OK] installed") if not rest else T("   ⚠️  این‌ها نصب نشد: ", "   [!] failed: ") + ", ".join(rest))
         else:
             result["missing_pkgs"] = missing
-            _say("   (بدون نصب — با --no-install اجرا شده)")
+            _say(T("   (بدون نصب — با --no-install اجرا شده)", "   (skipped: --no-install)"))
 
     tools = missing_tools()
     if tools and install and tools:
@@ -177,10 +198,10 @@ def ensure_all(py: str, install: bool = True, tools: bool = True) -> dict:
         tools = missing_tools()
     result["missing_tools"] = tools
     if not tools:
-        _say("🛠  ابزارهای جانبی: ffmpeg نصب است ✅ (ویدیو/صدا آماده)")
+        _say(T("🛠  ابزارهای جانبی: ffmpeg نصب است ✅ (ویدیو/صدا آماده)", "[OK] ffmpeg installed (video/audio ready)"))
     else:
         for t in tools:
-            _say(f"🛠  ابزار «{t}» نصب نیست — {tool_hint(t)}")
+            _say(T(f"🛠  ابزار «{t}» نصب نیست — {tool_hint(t)}", f"[!] {t} is missing - {tool_hint_en(t)}"))
 
     result["python_ok"] = bool(py)
     return result
