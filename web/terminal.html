@@ -41,9 +41,20 @@
     <b>MehranAiShabestar</b>
     <span class="dim">— ترمینال کارگزار</span>
     <span class="sp"></span>
+    <a href="/guide">🔑 گرفتن کلید</a>
     <a href="/">پنل کامل</a>
   </header>
   <div id="out"></div>
+  <div id="keyrow" style="display:none; border-top:1px solid #1d2833; background:#0b1016; padding:10px 12px">
+    <div class="dim" style="font-size:13px; margin-bottom:6px">
+      کلید هوش را همین‌جا پیست کن (از avalai.ir یا gapgpt.app — راهنما: <a href="/guide" style="color:#6fb1ff">اینجا</a>)
+    </div>
+    <div style="display:flex; gap:8px">
+      <input id="ky" placeholder="aa-...  یا  sk-..." style="flex:1; background:#07090c; border:1px solid #24313d; color:#e8f0f5; border-radius:8px; padding:10px; font-family:inherit; direction:ltr">
+      <button id="ks" style="background:#1f6feb;border:0;color:#fff;border-radius:8px;padding:10px 16px;font-family:inherit">ذخیره</button>
+    </div>
+    <div id="km" class="dim" style="font-size:13px; margin-top:6px"></div>
+  </div>
   <div id="bar">
     <span id="p">$</span>
     <input id="in" placeholder="کارت را به فارسی بنویس… مثلاً: یک پوستر تبلیغاتی برای کافه بساز" autocomplete="off">
@@ -133,6 +144,25 @@ function handle(ev) {
   }
 }
 
+document.getElementById('ks').onclick = async () => {
+  const k = document.getElementById('ky').value.trim();
+  const m = document.getElementById('km');
+  if (!k) { m.textContent = 'کلید خالی است'; return; }
+  m.textContent = '… در حال تست کلید';
+  const body = k.startsWith('aa-') ? { AVALAI_API_KEY: k } : { GAPGPT_API_KEY: k };
+  try {
+    const r = await fetch('/api/keys', { method:'POST', credentials:'same-origin',
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    m.textContent = d.message || (d.ok ? 'ذخیره شد' : 'خطا');
+    m.style.color = (d.message || '').startsWith('✅') ? '#39d353' : '#ffb454';
+    if ((d.message || '').startsWith('✅')) { L('ok', d.message); document.getElementById('keyrow').style.display='none'; }
+  } catch (e) { m.textContent = 'خطا: ' + e.message; }
+};
+if (location.hash === '#key' || !localStorage.getItem('mega_key_seen')) {
+  document.getElementById('keyrow').style.display = 'block';
+  localStorage.setItem('mega_key_seen', '1');
+}
 go.onclick = () => { const g = inp.value; inp.value = ''; run(g); };
 inp.addEventListener('keydown', e => { if (e.key === 'Enter') { const g = inp.value; inp.value = ''; run(g); } });
 L('dim', 'ترمینال ابرهوش — هر کاری که بنویسی، انجامش می‌دهد: کد می‌نویسد و اجرا می‌کند، فایل تحلیل می‌کند، عکس و ویدیو می‌سازد.');
