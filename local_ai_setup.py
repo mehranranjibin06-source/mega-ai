@@ -37,16 +37,41 @@ def total_ram_gb() -> float:
 
 
 def pick_model(args: list[str]) -> str:
+    """بزرگ‌ترین مغزی که این سرور می‌کشد را انتخاب می‌کند.
+
+    راهنما (نسخه‌ی فشرده Q4): هر میلیارد پارامتر ≈ ۰.۷ گیگ رم.
+    سرور ۲ گیگی → ۱.۵B ، ۸ گیگی → ۷B ، ۱۶ گیگی → ۱۴B ، ۳۲ گیگی → ۳۲B
+    """
     if "--model" in args:
         return args[args.index("--model") + 1]
-    if "--small" in args:
-        return "qwen2.5:0.5b"
+
     ram = total_ram_gb()
-    if ram and ram < 3.0:
-        say(f"ℹ️  رم سرور {ram:.1f} گیگابایت است → مدل کوچک (qwen2.5:0.5b) مناسب‌تر است.",
-            f"[i] Server RAM is {ram:.1f} GB -> using the smaller model (qwen2.5:0.5b).")
-        return "qwen2.5:0.5b"
-    return "qwen2.5:1.5b"
+    free = max(0.0, ram - 1.5)          # ۱.۵ گیگ برای ویندوز و ربات معامله‌گر
+    tiers = [
+        (50.0, "llama3.3:70b", "نزدیک به بهترین‌های جهان (رم ~۴۸ گیگ)"),
+        (28.0, "qwen2.5:32b", "هوش بالا (رم ~۳۲ گیگ)"),
+        (13.0, "qwen2.5:14b", "خوب (رم ~۱۶ گیگ)"),
+        (6.0, "qwen2.5:7b", "قابل قبول (رم ~۸ گیگ)"),
+        (3.0, "llama3.2:3b", "سبک (رم ~۴ گیگ)"),
+        (1.4, "qwen2.5:1.5b", "کوچک (رم ~۲ گیگ)"),
+        (0.0, "qwen2.5:0.5b", "خیلی کوچک"),
+    ]
+    for need, model, label in tiers:
+        if free >= need:
+            if ram:
+                say(f"🧮 رم سرور: {ram:.1f} گیگ → انتخاب شد: {model}   [{label}]",
+                    f"[i] Server RAM {ram:.1f} GB -> selected: {model}  [{label}]")
+            return model
+    return "qwen2.5:0.5b"
+
+
+def explain_tiers() -> None:
+    say("📊 مغز بزرگ‌تر = رم بیشتر:", "[i] Bigger brain needs more RAM:")
+    for line in ("   ۰.۵B ← ۱ گیگ رم      |      ۷B ← ۸ گیگ رم",
+                 "   ۱.۵B ← ۲ گیگ رم      |     ۱۴B ← ۱۶ گیگ رم",
+                 "    ۳B ← ۴ گیگ رم      |     ۳۲B ← ۳۲ گیگ رم",
+                 "                        |     ۷۰B ← ۴۸ گیگ رم"):
+        print("   " + line)
 
 
 def install_ollama() -> bool:
@@ -126,6 +151,7 @@ def main() -> int:
     ram = total_ram_gb()
     if ram:
         say(f"🧮 رم سرور: {ram:.1f} گیگابایت", f"[i] Server RAM: {ram:.1f} GB")
+    explain_tiers()
 
     if not install_ollama():
         return 1
