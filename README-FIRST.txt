@@ -64,3 +64,9 @@ FREE MODE (no API key needed):
   Text answers from free services can be slow or rate-limited on busy hours.
   For fast, stable answers: open the panel -> Keys -> paste a free API key
   (Iranian gateways like AvalAI / GapGPT give free credit in ~2 minutes).
+
+--- LOCAL AI (the brain runs on YOUR server, no API key) ---
+  1) python local_ai_setup.py      installs Ollama + downloads a small model
+                                   (first time only; re-run if the net drops - it resumes)
+  2) python start_vps.py           the app finds the local brain automatically
+  Needs ~2 GB free disk and ~1 GB RAM for the model.

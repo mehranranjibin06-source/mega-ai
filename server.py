@@ -101,7 +101,22 @@ def _listen_port() -> int:
 
 
 def _maybe_bridge() -> None:
-    """اگر هیچ کلید واقعی نیست، مدل نمایشی داخلی را وصل کن تا سیستم کار کند."""
+    """هوش را وصل کن: اول هوشِ خودِ سرور (Ollama/…)، وگرنه مدل نمایشی.
+
+    اگر روی همین کامپیوتر Ollama (یا LM Studio / llama.cpp) نصب و روشن باشد،
+    مدل واقعاً روی سرور خودت اجرا می‌شود: بدون کلید، بدون اینترنت، بدون تحریم.
+    """
+    try:
+        from mega import local_llm
+        found = local_llm.detect()
+        if found:
+            local_llm.activate(found)
+            print(f"[OK] Local AI found: {found['kind']} -> {found['base_url']} "
+                  f"({len(found['models'])} model(s))", flush=True)
+            return
+    except Exception as e:  # noqa: BLE001
+        print(f"[i] Local AI check skipped: {type(e).__name__}", flush=True)
+
     from mega import demo_model
     if not configured_providers():
         demo_model.enable(app, _listen_port())
