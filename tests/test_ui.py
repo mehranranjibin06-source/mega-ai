@@ -102,3 +102,25 @@ def test_echo_redirect_windows() -> None:
     assert _redirect_split("""echo '<b>hi</b>' > index.html""") == ("<b>hi</b>", "index.html", False)
     assert _redirect_split('echo "x" >> a.txt') == ("x", "a.txt", True)
     assert _redirect_split("dir > out.txt") is None
+
+
+def test_inapp_viewer_present() -> None:
+    """پنجرهٔ «نمایش در برنامه» باید در صفحه‌ها باشد (HTML، متن، عکس)."""
+    for page in ("index.html", "simple.html"):
+        html = (WEB / page).read_text(encoding="utf-8")
+        js = _js(html)
+        assert 'id="viewer"' in html, f"{page}: پنجرهٔ پیش‌نمایش نیست"
+        for fn in ("openViewer", "closeViewer", "kindOf", "dlUrl"):
+            assert fn in js, f"{page}: تابع {fn} نیست"
+
+
+def test_files_route_serves_inline() -> None:
+    """مسیر /files پیش‌فرض باید inline باشد (تا در برنامه باز شود) و با dl=1 دانلود."""
+    import re
+    src = (Path(__file__).resolve().parents[1] / "server.py").read_text(encoding="utf-8")
+    start = src.index('@app.get("/files/{path:path}")')
+    block = src[start + 10:]
+    block = block[:block.index("@app.")]
+    assert "dl: int = 0" in block, "پارامتر dl نیست"
+    assert "FileResponse(target, filename=target.name" in block, "حالت دانلود نیست"
+    assert block.count("FileResponse") >= 2, "حالت inline/دانلود جدا نشده"

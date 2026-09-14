@@ -527,6 +527,52 @@ function mdLite(t){
   blocks.forEach((b,i)=> s = s.replace(new RegExp(`\u0000${i}\u0000`), b));
   return s;
 }
+
+/* ═══════════ پیش‌نمایش درون برنامه (HTML/متن/عکس/ویدیو) ═══════════ */
+function dlUrl(url){ return url + (url.indexOf("?") >= 0 ? "&" : "?") + "dl=1"; }
+function kindOf(name){
+  const e = (name.split(".").pop() || "").toLowerCase();
+  if(["html","htm"].includes(e)) return "html";
+  if(["mp4","webm","mp3","wav","ogg","m4a","png","jpg","jpeg","webp","gif","svg"].includes(e)) return "media";
+  return "text";
+}
+function openViewer(url, name, kind){
+  kind = kind || kindOf(name);
+  const box = $("#viewer"), fr = $("#viewerFrame"), tx = $("#viewerText");
+  if(!box) return;
+  box.style.display = "block";
+  $("#viewerName").textContent = name;
+  $("#viewerKind").textContent = kind === "html" ? "صفحهٔ وب — داخل خود برنامه"
+    : (kind === "media" ? "فایل رسانه‌ای" : "متن/کد");
+  $("#viewerDl").href = dlUrl(url);
+  $("#viewerDl").setAttribute("download", name);
+  $("#viewerNew").href = url;
+  if(kind === "media"){
+    const ext = (name.split(".").pop() || "").toLowerCase();
+    tx.style.display = "block"; fr.style.display = "none";
+    tx.innerHTML = /^(mp4|webm)$/.test(ext) ? `<video src="${url}" controls style="max-width:100%;border-radius:12px"></video>`
+      : (/^(mp3|wav|ogg|m4a)$/.test(ext) ? `<audio src="${url}" controls style="width:100%"></audio>`
+      : `<img src="${url}" style="max-width:100%;border-radius:12px">`);
+    $("#viewerKind").textContent = "پخش داخل برنامه";
+    return;
+  }
+  if(kind === "text"){
+    fr.style.display = "none"; tx.style.display = "block"; tx.textContent = "⏳ در حال خواندن…";
+    fetch(url).then(r => r.text()).then(t => {
+      tx.textContent = t.slice(0, 200000);
+      if(!t.trim()) tx.textContent = "(فایل خالی است)";
+    }).catch(e => tx.textContent = "خطا در خواندن: " + e.message);
+    return;
+  }
+  tx.style.display = "none"; fr.style.display = "block"; fr.src = url;
+}
+function closeViewer(){
+  const box = $("#viewer"); if(!box) return;
+  box.style.display = "none";
+  const fr = $("#viewerFrame"); if(fr) fr.src = "about:blank";
+}
+document.addEventListener("keydown", e => { if(e.key === "Escape") closeViewer(); });
+
 function busy(t){ $("#busy").textContent = t; $("#mainProgress").classList.toggle("on", !!t); }
 function setRunning(on){ $("#btnQuick").disabled=on; $("#btnSmart").disabled=on; $("#btnDo").disabled=on; $("#stopBtn").disabled=!on; }
 $("#stopBtn").onclick = ()=>{ if(CTRL) CTRL.abort(); };
@@ -606,7 +652,8 @@ async function runAgent(){
         if(ev.type==="artifact"){ log.textContent += `📦 ${ev.name||ev.path} (${fmtSize(ev.size)}) — ${ev.url||""}\n`; log.scrollTop=1e6; loadFiles(); }
         if(ev.type==="final"){ acc = ev.text; body.innerHTML = mdLite(ev.text) +
           (ev.artifacts?.length? `<div style="margin-top:10px">${ev.artifacts.map(a=>`<div class="file">${fileIcon(a.path)}
-            <a href="${a.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(a.path))}" download>⬇️ ${esc(a.name||a.path)}</a><span class="sz">${fmtSize(a.size)}</span></div>`).join("")}</div>` : "");
+            <a href="${dlUrl(a.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(a.path)))}" download>⬇️ ${esc(a.name||a.path)}</a>
+            <button class="mini" onclick="openViewer('${a.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(a.path))}','${esc(a.name||a.path)}','${kindOf(a.name||a.path)}')">👁</button><span class="sz">${fmtSize(a.size)}</span></div>`).join("")}</div>` : "");
           loadFiles(); }
         if(ev.type==="error") log.textContent += `⚠️ ${ev.message}\n`;
       } }
@@ -620,7 +667,8 @@ async function loadFiles(){
     const d = await (await fetch("/api/artifacts")).json();
     const items=(d.items||[]).slice(0,30);
     $("#files").innerHTML = items.length? items.map(f=>`<div class="file">${fileIcon(f.name)}
-      <a href="${f.url}" download>⬇️ ${esc(f.path)}</a><span class="sz">${fmtSize(f.size)}</span></div>`).join("")
+      <a href="${dlUrl(f.url)}" download>⬇️ ${esc(f.path)}</a>
+        <button class="mini" onclick="openViewer('${f.url}','${esc(f.name)}','${kindOf(f.name)}')">👁</button><span class="sz">${fmtSize(f.size)}</span></div>`).join("")
       : `<span class="hint">هنوز فایلی ساخته نشده.</span>`;
   }catch(e){}
 }
@@ -706,5 +754,23 @@ $("#micBtn").onclick = async ()=>{
 
 boot();
 </script>
+
+<!-- ══════════════ پیش‌نمایش درون برنامه ══════════════ -->
+<div id="viewer" style="display:none;position:fixed;inset:0;z-index:70;background:#040714cc;backdrop-filter:blur(7px);padding:8px">
+  <div style="height:100%;display:flex;flex-direction:column;background:linear-gradient(165deg,#161f42,#111936);border:1px solid var(--line);border-radius:18px;overflow:hidden">
+    <div class="row" style="padding:9px 12px;border-bottom:1px solid var(--line);gap:8px">
+      <b id="viewerName" style="font-size:14px">پیش‌نمایش</b>
+      <span class="hint" id="viewerKind"></span>
+      <div class="grow"></div>
+      <a id="viewerDl" download><button>⬇️ دانلود</button></a>
+      <a id="viewerNew" target="_blank" rel="noopener"><button class="ghost">↗ تب جدید</button></a>
+      <button class="ghost" onclick="closeViewer()">✕ بستن</button>
+    </div>
+    <div style="flex:1;position:relative;background:#0b1128">
+      <iframe id="viewerFrame" title="پیش‌نمایش" style="width:100%;height:100%;border:0;background:#fff"></iframe>
+      <pre id="viewerText" style="display:none;margin:0;width:100%;height:100%;overflow:auto;padding:14px;direction:ltr;text-align:left;font-size:13px;line-height:2;color:#c9d3ff;background:#0b1128"></pre>
+    </div>
+  </div>
+</div>
 </body>
 </html>

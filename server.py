@@ -744,12 +744,20 @@ async def agent_run(payload: dict, request: Request):
 
 # ════════════════════════════════════════════ فایل‌های ساخته‌شده
 @app.get("/files/{path:path}")
-async def files(path: str):
+async def files(path: str, dl: int = 0):
+    """فایل‌های ساخته‌شده.
+
+    پیش‌فرض: داخل خود برنامه نمایش داده می‌شوند (HTML در iframe، عکس/ویدیو/صدا در پخش‌کننده).
+    با dl=1 : به‌صورت دانلود فرستاده می‌شوند.
+    """
     root = WORKSPACE.resolve()
     target = (root / path).resolve()
     if not str(target).startswith(str(root)) or not target.is_file():
         return JSONResponse({"ok": False, "error": "فایل پیدا نشد"}, status_code=404)
-    return FileResponse(target, filename=target.name)
+    headers = {"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"}
+    if int(dl or 0):
+        return FileResponse(target, filename=target.name, headers=headers)
+    return FileResponse(target, headers=headers)      # inline → در برنامه باز می‌شود
 
 
 @app.get("/api/artifacts")
