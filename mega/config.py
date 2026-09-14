@@ -220,6 +220,7 @@ IRAN_GATEWAYS = ["avalai", "gapgpt", "metisai", "winkapi", "sinox", "jarvis"]
 
 ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
     "router": [
+        ("cloudflare", ["@cf/meta/llama-3.1-8b-instruct-fp8"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -234,6 +235,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("deepseek", ["deepseek-chat"]),
     ],
     "judge": [
+        ("cloudflare", ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/qwen/qwen2.5-coder-32b-instruct"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -247,6 +249,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("deepseek", ["deepseek-reasoner", "deepseek-chat"]),
     ],
     "critic": [
+        ("cloudflare", ["@cf/meta/llama-3.3-70b-instruct-fp8-fast"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -260,6 +263,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("openrouter", ["deepseek/deepseek-chat-v3.1"]),
     ],
     "verifier": [
+        ("cloudflare", ["@cf/meta/llama-3.3-70b-instruct-fp8-fast"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -273,6 +277,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
     ],
     # اعضای پنل خبرگان از پرووایدرهای متفاوت انتخاب می‌شوند تا خطاها هم‌بسته نشوند
     "expert": [
+        ("cloudflare", ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/qwen/qwen2.5-coder-32b-instruct"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -290,6 +295,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
     ],
     # «پنل جانشین»: وقتی بیش از یک مدل از یک پرووایدر لازم داریم
     "agent": [
+        ("cloudflare", ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/qwen/qwen2.5-coder-32b-instruct"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -306,6 +312,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("groq", ["moonshotai/kimi-k2-instruct", "llama-3.3-70b-versatile"]),
     ],
     "expert2": [
+        ("cloudflare", ["@cf/meta/llama-3.3-70b-instruct-fp8-fast"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -475,8 +482,9 @@ PROVIDERS["mistral"] = Provider(
 PROVIDERS["cloudflare"] = Provider(
     "cloudflare", "Cloudflare Workers AI — رایگان روزانه (بدون کارت)", "openai",
     "https://api.cloudflare.com/client/v4/accounts/ACCOUNT_ID/ai/v1", "CLOUDFLARE_API_TOKEN",
-    ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/openai/gpt-oss-120b",
-     "@cf/meta/llama-3.1-8b-instruct-fp8-fast", "@cf/qwen/qwen3-32b"],
+    ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/qwen/qwen2.5-coder-32b-instruct",
+     "@cf/google/gemma-4-26b-a4b-it", "@cf/openai/gpt-oss-120b",
+     "@cf/meta/llama-3.1-8b-instruct-fp8"],
     "https://dash.cloudflare.com/profile/api-tokens",
 )
 
