@@ -422,7 +422,23 @@ class SkillBox:
 
     # ---------------------------------------------------------------- ابزارها
     async def _t_shell(self, command: str = "", timeout: int = 120, **_) -> str:
-        return await self._exec([command], timeout=int(timeout or 120), shell=True)
+        cmd = (command or "").strip()
+        # «echo متن > فایل» در ویندوز با کوتیشن و < > خطا می‌دهد → خودمان فایل را می‌سازیم
+        m = re.match(r"^echo\s+(?P<text>.+?)\s*>>?\s*(?P<path>[^\s>|]+)\s*$", cmd, re.S)
+        if m:
+            text = m.group("text").strip().strip("'\"").replace("\\n", "\n")
+            try:
+                target = self._safe(m.group("path").strip().strip("'\""))
+                target.parent.mkdir(parents=True, exist_ok=True)
+                prev = target.read_text(encoding="utf-8", errors="replace") if (">>" in cmd and target.exists()) else ""
+                target.write_text(prev + text + "\n", encoding="utf-8")
+                return f"فایل ساخته شد: {target.relative_to(self.dir)} ({len(text)} کاراکتر)\n[کد خروج: 0]"
+            except Exception as e:  # noqa: BLE001
+                return f"[خطا در نوشتن فایل: {type(e).__name__}: {e}]"
+        if os.name == "nt" and re.search(r"[<>]", cmd):
+            return ("[این دستور روی ویندوز اجرا نمی‌شود. برای ساختن فایل از ابزار write_file "
+                    "استفاده کن (args: path و content) و برای خواندن از read_file.]")
+        return await self._exec([cmd], timeout=int(timeout or 120), shell=True)
 
     async def _t_python(self, code: str = "", **_) -> str:
         f = self.dir / f"_run_{int(time.time()*1000) % 10**9}.py"

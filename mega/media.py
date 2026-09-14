@@ -23,8 +23,34 @@ from .config import ROOT, WORKSPACE
 FONTS = ROOT / "assets" / "fonts"
 FONT_BOLD = FONTS / "Vazirmatn-Bold.ttf"
 FONT_REG = FONTS / "Vazirmatn-Regular.ttf"
-FFMPEG = shutil.which("ffmpeg") or "ffmpeg"
-FFPROBE = shutil.which("ffprobe") or "ffprobe"
+def _resolve_ff(name: str) -> str:
+    """ffmpeg/ffprobe را هر بار پیدا می‌کند (اگر بعد از اجرا نصب شود هم دیده می‌شود)."""
+    w = shutil.which(name)
+    if w:
+        return w
+    d = os.environ.get("MEGA_FFMPEG_DIR")
+    cands = [Path(d)] if d else []
+    cands.append(Path.home() / ".mega" / "ffmpeg")
+    for base in cands:
+        try:
+            if base.is_file() and base.stem.lower() == name:
+                return str(base)
+            if base.is_dir():
+                hits = sorted(list(base.rglob(name + ".exe")) + list(base.rglob(name)))
+                if hits:
+                    return str(hits[0])
+        except Exception:  # noqa: BLE001
+            continue
+    return name
+
+
+def refresh_paths() -> None:
+    global FFMPEG, FFPROBE
+    FFMPEG = _resolve_ff("ffmpeg")
+    FFPROBE = _resolve_ff("ffprobe")
+
+
+refresh_paths()
 
 VOICES = {"زن (دیلارا)": "fa-IR-DilaraNeural", "مرد (فرید)": "fa-IR-FaridNeural",
           "انگلیسی زن": "en-US-AriaNeural", "انگلیسی مرد": "en-US-GuyNeural",
@@ -43,6 +69,7 @@ THEMES = {
 
 # ------------------------------------------------------------------ کمکی‌ها
 def have_ffmpeg() -> bool:
+    refresh_paths()
     try:
         subprocess.run([FFMPEG, "-version"], capture_output=True, timeout=10)
         return True
@@ -69,6 +96,67 @@ except Exception:                                     # pragma: no cover
     _RAQM = False
 
 _ARABIC_RE = re.compile(r"[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]")
+
+
+THEME_EN = {
+    "بنفش شب": "deep purple night, neon glow",
+    "اقیانوس": "deep blue ocean, water reflections",
+    "غروب": "orange sunset sky, warm light",
+    "جنگل": "dark green forest, natural light",
+    "طلایی لوکس": "black and gold luxury, elegant gold light",
+    "قرمز آتشین": "fiery red and orange, dramatic light",
+    "سفید مینیمال": "clean minimal white studio background",
+}
+
+
+def ai_image_enabled() -> bool:
+    """آیا کلید Cloudflare داریم که بتوانیم عکس واقعی بسازیم؟"""
+    if os.environ.get("MEGA_AI_IMAGE", "1") in ("0", "false", "no", "off"):
+        return False
+    return bool(os.environ.get("CLOUDFLARE_API_TOKEN") and os.environ.get("CLOUDFLARE_ACCOUNT_ID"))
+
+
+def ai_background(prompt: str, out: str | Path, steps: int = 4, timeout: int = 90) -> str:
+    """یک تصویر واقعی با هوش مصنوعی (Cloudflare FLUX) می‌سازد — رایگان با همان کلید.
+
+    مسیر فایل ذخیره‌شده یا رشتهٔ خالی را برمی‌گرداند.
+    """
+    if not ai_image_enabled() or not (prompt or "").strip():
+        return ""
+    out = Path(out)
+    if out.exists() and out.stat().st_size > 1000:      # کش: دوباره هزینه نکن
+        return str(out)
+    try:
+        import base64
+        import json as _json
+        import urllib.request
+
+        acc = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "").strip()
+        tok = os.environ.get("CLOUDFLARE_API_TOKEN", "").strip()
+        url = (f"https://api.cloudflare.com/client/v4/accounts/{acc}"
+               "/ai/run/@cf/black-forest-labs/flux-1-schnell")
+        body = _json.dumps({"prompt": prompt.strip()[:1500], "steps": int(steps)}).encode()
+        req = urllib.request.Request(url, data=body, headers={
+            "Authorization": f"Bearer {tok}", "Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = _json.loads(r.read().decode("utf-8", "replace"))
+        raw = base64.b64decode((data.get("result") or {}).get("image") or "")
+        if len(raw) < 1000:
+            return ""
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(raw)
+        return str(out)
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def ai_bg_prompt(theme: str = "", extra: str = "") -> str:
+    """پرامپت انگلیسی برای پس‌زمینه (بدون متن، تا حرف اضافه در عکس نیفتد)."""
+    look = THEME_EN.get(theme, "modern dark premium")
+    tail = "cinematic advertising background, premium, high detail, clean empty space for text"
+    if extra:
+        tail += f", {extra[:160]}"
+    return (f"{look}, {tail}, no text, no words, no letters, no watermark, no logo")
 
 
 def _direction(text: str) -> str | None:
@@ -158,6 +246,9 @@ def make_image(path: str | Path, title: str, lines: list[str] | None = None,
     scale = min(W, H) / 1080 if ratio != "9:16" else 1
     c1, c2, accent, accent2 = THEMES.get(theme, THEMES["بنفش شب"])
     photo_used = False
+    if not bg and ai_image_enabled():
+        # پس‌زمینه‌ی واقعی با هوش مصنوعی (اگر کلید رایگان Cloudflare موجود باشد)
+        bg = ai_background(ai_bg_prompt(theme), Path(path).with_suffix(".bg.jpg")) or None
     if bg:
         try:
             from PIL import Image as _I, ImageFilter as _F, ImageEnhance as _E

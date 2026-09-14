@@ -292,6 +292,19 @@ def main() -> int:
         say("✅ کتابخانه‌ها آماده‌اند.", "[OK] Libraries are ready.")
     say("")
 
+    # ۳.۵) ffmpeg (برای ساخت ویدیو) — اگر نبود، در پس‌زمینه دانلود می‌شود
+    try:
+        from mega import ffmpeg_setup  # noqa: PLC0415
+        if ffmpeg_setup.find():
+            say("✅ ffmpeg آماده است (ساخت ویدیو فعال).",
+                "[OK] ffmpeg is ready (video enabled).")
+        else:
+            say("ℹ️  ffmpeg نصب نیست → دانلود خودکار در پس‌زمینه (برای ساخت ویدیو).",
+                "[i] ffmpeg missing -> downloading in background (for video).")
+            threading.Thread(target=ffmpeg_setup.ensure_ffmpeg, daemon=True).start()
+    except Exception as e:  # noqa: BLE001
+        say(f"ℹ️  راه‌اندازی ffmpeg رد شد: {e}", f"[i] ffmpeg setup skipped: {e}")
+
     # ۴) پورت + فایروال
     wanted = int(os.environ.get("MEGA_PORT") or os.environ.get("PORT") or DEFAULT_PORT)
     port = choose_port(wanted)
