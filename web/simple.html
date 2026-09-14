@@ -101,6 +101,7 @@
   <span class="pill" id="connPill">در حال بررسی…</span>
   <button class="ghost" id="openSettings">⚙️ تنظیمات</button>
   <a href="/advanced" style="text-decoration:none"><button class="ghost">🧰 حالت حرفه‌ای</button></a>
+  <a href="/tv" style="text-decoration:none"><button class="ghost">📺 تلویزیون</button></a>
 </header>
 
 <main>
@@ -601,7 +602,7 @@ async function runAgent(){
         if(ev.type==="artifact"){ log.textContent += `📦 ${ev.name||ev.path} (${fmtSize(ev.size)}) — ${ev.url||""}\n`; log.scrollTop=1e6; loadFiles(); }
         if(ev.type==="final"){ acc = ev.text; body.innerHTML = mdLite(ev.text) +
           (ev.artifacts?.length? `<div style="margin-top:10px">${ev.artifacts.map(a=>`<div class="file">${fileIcon(a.path)}
-            <a href="${a.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(a.path))}" target="_blank">${esc(a.name||a.path)}</a><span class="sz">${fmtSize(a.size)}</span></div>`).join("")}</div>` : "");
+            <a href="${a.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(a.path))}" download>⬇️ ${esc(a.name||a.path)}</a><span class="sz">${fmtSize(a.size)}</span></div>`).join("")}</div>` : "");
           loadFiles(); }
         if(ev.type==="error") log.textContent += `⚠️ ${ev.message}\n`;
       } }
@@ -615,7 +616,7 @@ async function loadFiles(){
     const d = await (await fetch("/api/artifacts")).json();
     const items=(d.items||[]).slice(0,30);
     $("#files").innerHTML = items.length? items.map(f=>`<div class="file">${fileIcon(f.name)}
-      <a href="${f.url}" target="_blank">${esc(f.path)}</a><span class="sz">${fmtSize(f.size)}</span></div>`).join("")
+      <a href="${f.url}" download>⬇️ ${esc(f.path)}</a><span class="sz">${fmtSize(f.size)}</span></div>`).join("")
       : `<span class="hint">هنوز فایلی ساخته نشده.</span>`;
   }catch(e){}
 }

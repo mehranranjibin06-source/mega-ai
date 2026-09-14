@@ -103,6 +103,8 @@
     <button data-tab="skills">🧩 مهارت‌ها</button>
     <button data-tab="telegram">📨 تلگرام</button>
     <button data-tab="keys">🔑 کلیدها</button>
+    <a href="/tv" style="text-decoration:none"><button type="button">📺 تلویزیون</button></a>
+    <a href="/terminal" style="text-decoration:none"><button type="button">🖥 ترمینال</button></a>
   </nav>
 </header>
 
@@ -495,7 +497,7 @@ function handleAgent(ev, stepEl, toolCount){
       break; }
     case "artifact": {
       const icon = fileIcon(ev.path);
-      bubble("step", `<div class="meta">📦 فایل ساخته شد</div>${icon} <a href="${ev.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(ev.path))}" target="_blank">${esc(ev.name||ev.path)}</a>
+      bubble("step", `<div class="meta">📦 فایل ساخته شد</div>${icon} <a href="${ev.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(ev.path))}" download>⬇️ ${esc(ev.name||ev.path)}</a>
         <span class="hint">(${fmtSize(ev.size)})</span>`);
       loadFiles(); break; }
     case "error": bubble("step", `<div class="err">⚠️ ${esc(ev.message)}</div>`); break;
@@ -511,7 +513,7 @@ async function loadFiles(){
     const d = await (await fetch("/api/artifacts"+(SESSION?`?session=${encodeURIComponent(SESSION)}`:""))).json();
     const items = d.items||[];
     $("#fileList").innerHTML = items.length? items.slice(0,60).map(f=>`
-      <div class="file">${fileIcon(f.name)}<span class="n"><a href="${f.url}" target="_blank">${esc(f.path)}</a></span>
+      <div class="file">${fileIcon(f.name)}<span class="n"><a href="${f.url}" download>${esc(f.path)}</a></span>
       <span class="s">${fmtSize(f.size)}</span></div>`).join("") : `<span class="hint">هنوز فایلی ساخته نشده.</span>`;
   }catch(e){}
 }
@@ -594,9 +596,7 @@ $("#adRun").onclick = async ()=>{
   try{
     const d=await (await fetch("/api/media/video",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)})).json();
     $("#adStatus").textContent = d.ok? `✅ آماده شد — ${d.seconds} ثانیه، ${d.scenes} صحنه` : "⚠️ "+(d.error||"خطا");
-    $("#adResult").innerHTML = d.ok? `<video class="thumb" src="${d.url}" controls></video>
-      <div class="row" style="margin-top:8px"><a href="${d.url}" target="_blank"><button>⬇️ دانلود</button></a>
-      <span class="hint">${esc(d.url)}</span></div>` : "";
+    $("#adResult").innerHTML = d.ok? mediaBox("video", d.url, "teaser.mp4") : "";
   }catch(e){ $("#adStatus").textContent="خطا: "+e.message; }
   $("#adRun").disabled=false; loadStudioFiles();
 };
@@ -608,8 +608,7 @@ $("#imgRun").onclick = async ()=>{
   $("#imgStatus").textContent="⏳…"; 
   const d=await (await fetch("/api/media/image",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)})).json();
   $("#imgStatus").textContent=d.ok?"✅ آماده":"⚠️";
-  $("#imgResult").innerHTML=d.ok?`<img class="thumb" src="${d.url}"><div class="row" style="margin-top:8px">
-    <a href="${d.url}" target="_blank"><button>⬇️ دانلود</button></a></div>`:"";
+  $("#imgResult").innerHTML=d.ok?mediaBox("img", d.url, "poster.jpg"):"";
   loadStudioFiles();
 };
 $("#vidRun").onclick = async ()=>{
@@ -622,9 +621,24 @@ $("#vidRun").onclick = async ()=>{
     body:JSON.stringify({kind:"video", scenes, ratio:$("#vidRatio").value, voice:$("#vidVoice").value,
       subtitles:$("#vidSubs").checked, motion:$("#vidMotion").checked, session_id:SESSION||undefined})})).json();
   $("#vidStatus").textContent=d.ok?`✅ ${d.seconds} ثانیه`:"⚠️ "+(d.error||"");
-  $("#vidResult").innerHTML=d.ok?`<video class="thumb" src="${d.url}" controls></video>`:"";
+  $("#vidResult").innerHTML=d.ok?mediaBox("video", d.url, "video.mp4"):"";
   $("#vidRun").disabled=false; loadStudioFiles();
 };
+function mediaBox(kind,url,name){
+  const id="mb"+Math.random().toString(36).slice(2,8);
+  return `<div class="row" style="margin-top:8px;gap:8px;align-items:center">
+    <a href="${url}" download="${name||"file"}"><button>⬇️ دانلود فایل</button></a>
+    <button class="ghost" onclick="togglePrev('${id}','${kind}','${url}')">👁 نمایش</button></div>
+  <div id="${id}" style="margin-top:8px"></div>`;
+}
+function togglePrev(id,kind,url){
+  const el=document.getElementById(id); if(!el) return;
+  if(el.dataset.on==="1"){ el.innerHTML=""; el.dataset.on="0"; return; }
+  el.innerHTML = kind==="video" ? `<video class="thumb" src="${url}" controls></video>`
+    : kind==="audio" ? `<audio class="thumb" src="${url}" controls></audio>`
+    : `<img class="thumb" src="${url}">`;
+  el.dataset.on="1";
+}
 async function loadStudioFiles(){
   try{ const d=await (await fetch("/api/artifacts"+((SESSION)?`?session=${encodeURIComponent(SESSION)}`:""))).json();
     const items=(d.items||[]).filter(f=>/\.(mp4|png|jpe?g|mp3|wav)$/i.test(f.name)).slice(0,40);
@@ -641,8 +655,7 @@ $("#ttsRun").onclick = async ()=>{
   const d=await (await fetch("/api/voice/tts",{method:"POST",headers:{"content-type":"application/json"},
     body:JSON.stringify({text, voice:$("#ttsVoice").value})})).json();
   $("#ttsStatus").textContent=d.ok?`✅ ${d.seconds||""} ثانیه (${d.engine||""})`:"⚠️ "+(d.error||"");
-  $("#ttsResult").innerHTML=d.ok?`<audio class="thumb" style="margin-top:8px" src="${d.url}" controls></audio>
-    <div class="row" style="margin-top:6px"><a href="${d.url}" target="_blank"><button>⬇️ دانلود</button></a></div>`:"";
+  $("#ttsResult").innerHTML=d.ok?mediaBox("audio", d.url, "voice.mp3"):"";
   loadStudioFiles();
 };
 $("#sttRun").onclick = async ()=>{

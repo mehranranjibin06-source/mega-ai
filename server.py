@@ -147,6 +147,21 @@ async def advanced():
     return FileResponse(WEB_DIR / "index.html")
 
 
+@app.get("/tv")
+async def tv_page():
+    """📺 تلویزیون: کانال‌های آزاد فارسی/آذربایجانی/ترکی (رایگان، بدون اشتراک)."""
+    return FileResponse(WEB_DIR / "tv.html")
+
+
+@app.get("/api/tv")
+async def tv_api(refresh: int = 0):
+    """فهرست کانال‌ها (کش ۱۲ ساعته؛ با refresh=1 از نو گرفته می‌شود)."""
+    from mega import tv as tvmod
+    data = await asyncio.to_thread(tvmod.load, bool(refresh))
+    items = data.get("items") or []
+    return {"ok": True, "count": len(items), "updated": data.get("updated"), "items": items}
+
+
 @app.get("/assets/{name}")
 async def asset_file(name: str):
     """فایل‌های برند (لوگو، فونت) — از پوشه‌ی assets سرو می‌شوند."""
