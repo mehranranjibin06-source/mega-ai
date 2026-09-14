@@ -162,6 +162,49 @@ async def tv_api(refresh: int = 0):
     return {"ok": True, "count": len(items), "updated": data.get("updated"), "items": items}
 
 
+@app.get("/more")
+async def more_page():
+    """✨ افزودنی‌ها: آب‌وهوا، رادیو، اخبار، مترجم (همه رایگان و بدون کلید)."""
+    return FileResponse(WEB_DIR / "more.html")
+
+
+@app.get("/api/addons")
+async def addons_status():
+    """فهرست افزودنی‌های نصب‌شده برای داشبورد."""
+    from mega import addons
+    return addons.status()
+
+
+@app.get("/api/weather")
+async def weather_api(city: str = "\u062a\u0628\u0631\u06cc\u0632"):
+    """آب‌وهوای امروز + ۵ روز آیندهٔ یک شهر (فارسی)."""
+    from mega import addons
+    return await asyncio.to_thread(addons.weather, city)
+
+
+@app.get("/api/radio")
+async def radio_api(country: str = "", q: str = "", refresh: int = 0):
+    """ایستگاه‌های رادیوی اینترنتی رایگان."""
+    from mega import addons
+    return await asyncio.to_thread(addons.radio, country, q, bool(refresh))
+
+
+@app.get("/api/news")
+async def news_api(refresh: int = 0):
+    """تیترهای تازه از خبرگزاری‌های فارسی (RSS)."""
+    from mega import addons
+    return await asyncio.to_thread(addons.news, bool(refresh))
+
+
+@app.post("/api/translate")
+async def translate_api(payload: dict):
+    """ترجمهٔ متن — بدون کلید (MyMemory)."""
+    from mega import addons
+    return await asyncio.to_thread(addons.translate, str(payload.get("text") or ""),
+                                   str(payload.get("to") or "en"),
+                                   str(payload.get("from") or "fa"))
+
+
 @app.get("/assets/{name}")
 async def asset_file(name: str):
     """فایل‌های برند (لوگو، فونت) — از پوشه‌ی assets سرو می‌شوند."""

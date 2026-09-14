@@ -82,6 +82,40 @@
   footer{color:var(--dim);font-size:12px;text-align:center;padding:16px}
   .kbd{font-size:11px;border:1px solid var(--line);border-radius:6px;padding:1px 5px;color:var(--dim)}
   .rec{background:#3b0d0d;border-color:#a33;animation:p 1s infinite}
+  /* ═══ ظاهر تازهٔ داشبورد (MehranAiShabestar) ═══ */
+  header{box-shadow:0 10px 34px #00000055}
+  nav button{transition:transform .16s,background .16s,box-shadow .16s}
+  nav button:hover{transform:translateY(-1px);background:#ffffff14}
+  nav button.on{background:linear-gradient(135deg,var(--accent),#4f46e5);box-shadow:0 8px 22px #7c5cff55}
+  .card{background:linear-gradient(165deg,#151d3e,#111936);box-shadow:0 12px 30px #00000033}
+  .hero{position:relative;overflow:hidden;border-radius:22px;padding:22px;border:1px solid #2b3566;
+        background:linear-gradient(130deg,#1d1746 0%,#111936 48%,#0d2b3a 100%);box-shadow:0 18px 44px #0000004d}
+  .hero:before{content:"";position:absolute;top:-140px;left:-60px;width:360px;height:360px;border-radius:50%;
+        background:radial-gradient(circle,#7c5cff55,transparent 68%);animation:floaty 11s ease-in-out infinite}
+  .hero:after{content:"";position:absolute;bottom:-160px;right:-40px;width:320px;height:320px;border-radius:50%;
+        background:radial-gradient(circle,#22d3ee44,transparent 68%);animation:floaty 13s ease-in-out infinite reverse}
+  @keyframes floaty{50%{transform:translateY(22px) scale(1.08)}}
+  .hero>*{position:relative;z-index:1}
+  .hero h1{margin:0 0 8px;font-size:26px;line-height:1.6;
+        background:linear-gradient(90deg,#ffffff,#a9c8ff 60%,#6ee7f5);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero-sub{margin:0;color:#aab4dd;font-size:13.5px;line-height:2}
+  .chip{border:1px solid var(--line);background:#ffffff0d;border-radius:999px;padding:6px 12px;font-size:12.5px;color:var(--txt);cursor:pointer}
+  .chip:hover{border-color:var(--accent);background:#7c5cff22}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px}
+  .stat{background:linear-gradient(160deg,#161f42,#101833);border:1px solid var(--line);border-radius:16px;padding:13px;text-align:center}
+  .stat b{display:block;font-size:22px;color:#cfd9ff}
+  .stat span{font-size:12px;color:var(--dim)}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
+  .tile{display:flex;flex-direction:column;gap:4px;padding:14px;border-radius:16px;text-decoration:none;color:var(--txt);
+        border:1px solid var(--line);background:linear-gradient(160deg,#161f42,#101833);cursor:pointer;
+        transition:transform .16s,border-color .16s,box-shadow .16s}
+  .tile:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 14px 30px #7c5cff33}
+  .tile .ic{font-size:23px}
+  .tile b{font-size:14.5px}
+  .tile span{font-size:11.5px;color:var(--dim);line-height:1.7}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#2a3566;border-radius:9px}
+  ::-webkit-scrollbar-track{background:#0b1128}
 </style>
 </head>
 <body>
@@ -96,7 +130,8 @@
   <span id="statusBadge" class="badge demo">در حال بررسی…</span>
   <div class="grow"></div>
   <nav id="nav">
-    <button data-tab="agent" class="on">🤖 کارگزار</button>
+    <button data-tab="dashboard" class="on">🏠 داشبورد</button>
+    <button data-tab="agent">🤖 کارگزار</button>
     <button data-tab="council">🧠 پنل خبرگان</button>
     <button data-tab="studio">🎬 استودیو</button>
     <button data-tab="voice">🎙 صدا</button>
@@ -104,13 +139,71 @@
     <button data-tab="telegram">📨 تلگرام</button>
     <button data-tab="keys">🔑 کلیدها</button>
     <a href="/tv" style="text-decoration:none"><button type="button">📺 تلویزیون</button></a>
+    <a href="/more" style="text-decoration:none"><button type="button">✨ افزودنی‌ها</button></a>
     <a href="/terminal" style="text-decoration:none"><button type="button">🖥 ترمینال</button></a>
   </nav>
 </header>
 
 <main>
+<!-- ══════════════ داشبورد ══════════════ -->
+<section id="tab-dashboard">
+  <div class="hero">
+    <h1>🏠 داشبورد ابرهوش مهران</h1>
+    <p class="hero-sub">هرچه می‌خواهی بنویس: <b>ویدیو، تیزر تبلیغ، فیلم، پوستر، کد با تست، تحلیل، سایت</b> — می‌سازد، اجرا می‌کند و فایل تحویل می‌دهد.</p>
+    <div class="row" style="margin-top:12px">
+      <input id="dashGoal" placeholder="مثلاً: یک تیزر تبلیغ یک‌دقیقه‌ای برای فروشگاه لباس بساز" style="flex:1;min-width:240px">
+      <button class="primary" id="dashRun">🚀 اجرا کن</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <span class="chip" data-fill="یک تیزر تبلیغ یک‌دقیقه‌ای برای فروشگاه لباس با صداگذاری بساز">🎬 تیزر تبلیغ</span>
+      <span class="chip" data-fill="یک پوستر تبلیغاتی جذاب برای فروشگاه موبایل بساز">🖼 پوستر</span>
+      <span class="chip" data-fill="یک سایت فروشگاهی تک‌صفحه‌ای با HTML بساز و تست کن">🌐 سایت</span>
+      <span class="chip" data-fill="یک بازی مار با پایتون بنویس، اجرا کن و تست کن تا سبز شود">🐍 کد + تست</span>
+      <span class="chip" data-fill="آخرین اخبار و تحلیل بازار را خلاصه کن">📊 تحلیل</span>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="dModels">—</b><span>هوش فعال</span></div>
+    <div class="stat"><b id="dRuns">—</b><span>کارهای اجراشده</span></div>
+    <div class="stat"><b id="dFiles">—</b><span>فایل‌های ساخته‌شده</span></div>
+    <div class="stat"><b id="dAddons">—</b><span>افزودنی آماده</span></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>⚡ دسترسی سریع</h3>
+    <div class="tiles">
+      <div class="tile" data-go="agent"><span class="ic">🤖</span><b>کارگزار</b><span>هر کاری را انجام می‌دهد</span></div>
+      <div class="tile" data-go="studio"><span class="ic">🎬</span><b>استودیو ویدیو</b><span>تیزر، تبلیغ، پوستر</span></div>
+      <a class="tile" href="/tv"><span class="ic">📺</span><b>تلویزیون</b><span>کانال‌های آزاد ایران/آذربایجان/ترکیه</span></a>
+      <a class="tile" href="/more#radio"><span class="ic">📻</span><b>رادیو</b><span>ایستگاه‌های اینترنتی رایگان</span></a>
+      <a class="tile" href="/more#weather"><span class="ic">🌦</span><b>آب‌وهوا</b><span>هر شهری، ۵ روز آینده</span></a>
+      <a class="tile" href="/more#news"><span class="ic">📰</span><b>اخبار</b><span>خبرگزاری‌های فارسی</span></a>
+      <a class="tile" href="/more#translate"><span class="ic">🌐</span><b>مترجم</b><span>۱۲ زبان، بدون کلید</span></a>
+      <div class="tile" data-go="voice"><span class="ic">🎙</span><b>صدا</b><span>گفتار ⇄ متن</span></div>
+      <div class="tile" data-go="council"><span class="ic">🧠</span><b>پنل خبرگان</b><span>چند مدل با هم</span></div>
+      <div class="tile" data-go="skills"><span class="ic">🧩</span><b>مهارت‌ها</b><span>نصب کتابخانه و اسکیل</span></div>
+      <div class="tile" data-go="telegram"><span class="ic">📨</span><b>تلگرام</b><span>ربات بساز</span></div>
+      <a class="tile" href="/terminal"><span class="ic">🖥</span><b>ترمینال</b><span>دستور بده، انجام شود</span></a>
+      <a class="tile" href="/guide"><span class="ic">🔑</span><b>راهنمای هوش</b><span>رایگان، بدون کارت بانکی</span></a>
+      <div class="tile" data-go="keys"><span class="ic">⚙️</span><b>کلیدها</b><span>وصل کردن هوش</span></div>
+    </div>
+  </div>
+
+  <div class="cols" style="margin-top:14px">
+    <div class="card">
+      <h3>🕒 آخرین فایل‌های ساخته‌شده <span class="hint">(برای دیدن، اول دانلود)</span></h3>
+      <div class="files" id="dashFiles"><span class="hint">…</span></div>
+    </div>
+    <div class="card">
+      <h3>📊 وضعیت هوش</h3>
+      <div id="dashBrain" class="hint">…</div>
+    </div>
+  </div>
+</section>
+
 <!-- ══════════════ کارگزار ══════════════ -->
-<section id="tab-agent">
+<section id="tab-agent" class="panel-hidden">
   <div class="cols">
     <div>
       <div class="card">
@@ -363,7 +456,7 @@ function fileIcon(name){
 /* ── تب‌ها */
 $$("#nav button").forEach(b=> b.onclick = ()=>{
   $$("#nav button").forEach(x=>x.classList.remove("on")); b.classList.add("on");
-  ["agent","council","studio","voice","skills","telegram","keys"].forEach(t=>
+  ["dashboard","agent","council","studio","voice","skills","telegram","keys"].forEach(t=>
     $("#tab-"+t).classList.toggle("panel-hidden", t!==b.dataset.tab));
   if (b.dataset.tab==="keys") loadHealth();
   if (b.dataset.tab==="skills") loadSkills();
@@ -733,8 +826,39 @@ $("#micBtn").onclick = async ()=>{
   }catch(e){ alert("دسترسی به میکروفون ممکن نشد."); }
 };
 
+
+/* ═══════════ داشبورد ═══════════ */
+function goTab(name){ const b=document.querySelector(`#nav button[data-tab="${name}"]`); if(b) b.click(); }
+document.querySelectorAll(".tile[data-go]").forEach(t=> t.onclick=()=>goTab(t.dataset.go));
+document.querySelectorAll("[data-fill]").forEach(c=> c.onclick=()=>{ const g=$("#dashGoal"); g.value=c.dataset.fill; g.focus(); });
+$("#dashRun").onclick = ()=>{ const g=$("#dashGoal"); const v=g.value.trim()||"یک تیزر تبلیغ یک‌دقیقه‌ای بساز";
+  goTab("agent"); $("#goal").value=v; runAgent(); };
+$("#dashGoal").addEventListener("keydown", e=>{ if(e.key==="Enter") $("#dashRun").click(); });
+
+async function loadDash(){
+  try{
+    const h=await (await fetch("/api/health")).json();
+    $("#dModels").textContent=(h.active||[]).length;
+    const st=h.stats||{}; $("#dRuns").textContent=(st.runs!=null? st.runs : "—");
+    const b=$("#dashBrain");
+    b.innerHTML = h.demo
+      ? `<span class="badge demo">حالت نمایشی</span><div style="margin-top:8px;line-height:2">هنوز هوش واقعی وصل نیست.<br>
+         برو به <a href="/guide">🔑 راهنمای هوش</a>، یک کلید رایگان (بدون کارت بانکی) بگیر و همان‌جا بچسبان — کار تمام است.</div>`
+      : `<span class="badge good">فعال: ${esc((h.active||[]).join(" · "))}</span>
+         <div style="margin-top:8px;line-height:2">مدل آماده است. در «کارگزار» یا «ترمینال» هرچه می‌خواهی بنویس.</div>`;
+  }catch(e){ $("#dashBrain").textContent="سرور در دسترس نیست."; }
+  try{
+    const d=await (await fetch("/api/artifacts")).json(); const it=(d.items||[]);
+    $("#dFiles").textContent=it.length;
+    $("#dashFiles").innerHTML = it.slice(0,12).map(f=>`<div class="file">${fileIcon(f.name)}
+      <span class="n">${esc(f.name)}</span><span class="s">${fmtSize(f.size)}</span>
+      <a href="${f.url}" download title="دانلود">⬇️</a></div>`).join("") || `<span class="hint">هنوز فایلی ساخته نشده — یک کار شروع کن!</span>`;
+  }catch(e){}
+  try{ const a=await (await fetch("/api/addons")).json(); $("#dAddons").textContent=(a.addons||[]).length; }catch(e){}
+}
+
 /* راه‌اندازی */
-loadHealth(); loadOptions(); loadFiles(); loadStudioFiles(); loadSkills(); tgStatus(); loadRank();
+loadHealth(); loadOptions(); loadFiles(); loadStudioFiles(); loadSkills(); tgStatus(); loadRank(); loadDash();
 setInterval(loadHealth, 60000);
 </script>
 </body>
