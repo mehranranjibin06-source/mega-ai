@@ -435,8 +435,12 @@ let SESSION = localStorage.getItem("mega.agent.session") || "", CSESSION = local
 let OPTIONS = {themes:[], voices:{}, presets:[]};
 
 /* ── markdown سبک */
+function stripTools(t){
+  return (t||"").replace(/```(?:tool|tool_call)[\s\S]*?(?:```|$)/g, "").replace(/\n{3,}/g,"\n\n").replace(/^\s+/,"");
+}
+
 function md(src){
-  let t = esc(src||""); const blocks=[];
+  let t = esc(stripTools(src)); const blocks=[];
   t = t.replace(/```(\w*)\n?([\s\S]*?)```/g,(m,l,c)=>{blocks.push(`<pre><code>${c}</code></pre>`);return `\u0000${blocks.length-1}\u0000`;});
   t = t.replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>");
   t = t.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/`([^`\n]+)`/g,"<code>$1</code>");
@@ -576,7 +580,7 @@ function handleAgent(ev, stepEl, toolCount){
       break; }
     case "delta": {
       const el = stepEl[ev.n]; if(!el) break;
-      const pre = el.querySelector(".txt"); pre.dataset.raw=(pre.dataset.raw||"")+ev.text; pre.textContent=pre.dataset.raw;
+      const pre = el.querySelector(".txt"); pre.dataset.raw=(pre.dataset.raw||"")+ev.text; pre.textContent=stripTools(pre.dataset.raw);
       break; }
     case "tool": {
       toolCount[ev.n]=(toolCount[ev.n]||0)+1;

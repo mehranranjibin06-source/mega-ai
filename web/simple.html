@@ -515,8 +515,11 @@ function addBubble(who, text, cls=""){
   d.querySelector(".body").innerHTML = who==="me"? esc(text) : mdLite(text);
   $("#chat").appendChild(d); d.scrollIntoView({behavior:"smooth",block:"end"}); return d;
 }
+function stripTools(t){
+  return (t||"").replace(/```(?:tool|tool_call)[\s\S]*?(?:```|$)/g, "").replace(/\n{3,}/g,"\n\n").replace(/^\s+/,"");
+}
 function mdLite(t){
-  let s = esc(t||"");
+  let s = esc(stripTools(t));
   const blocks=[]; s = s.replace(/```(\w*)\n?([\s\S]*?)```/g,(m,l,c)=>{blocks.push(`<pre>${c}</pre>`);return `\u0000${blocks.length-1}\u0000`;});
   s = s.replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>");
   s = s.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/`([^`\n]+)`/g,"<code>$1</code>");

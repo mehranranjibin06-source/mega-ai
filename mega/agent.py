@@ -22,7 +22,7 @@ from .media import make_ad, make_image, make_video, poster_from_photo, probe_dur
 from .memory import MEMORY, Memory
 from .providers import ChatResult, ModelSpec, chat, resolve_role
 from .skills import SkillBox, update_libraries
-from .tools import ToolBox, extract_tool_calls, strip_tool_blocks
+from .tools import ToolBox, extract_tool_calls, strip_tool_blocks, ToolFenceFilter
 
 AGENT_SYS = """تو «کارگزار مطلق» (Mega Agent) هستی: دستیار اختصاصی و همه‌فن‌حریف مالک این سیستم.
 مأموریت: خواسته‌ی کاربر را **واقعاً اجرا کنی** و یک خروجی قابل استفاده تحویل بدهی — نه توضیح، نه وعده.
@@ -200,8 +200,9 @@ class MegaAgent:
         for step in range(max_steps):
             step_no = step + 1
             await q.put({"type": "step", "n": step_no, "state": "start"})
-            r: ChatResult = await chat(model, msgs, self.s,
-                                       lambda t: q.put_nowait({"type": "delta", "n": step_no, "text": t}))
+            stream = ToolFenceFilter(lambda t: q.put_nowait({"type": "delta", "n": step_no, "text": t}))
+            r: ChatResult = await chat(model, msgs, self.s, stream.feed)
+            stream.flush()
             self.m.add_stage(run_id, "agent", r.model or model.model, r.provider or model.provider,
                              r.text, r.seconds, r.ok, r.tokens)
             if not r.ok:

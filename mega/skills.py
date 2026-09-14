@@ -333,6 +333,38 @@ TEMPLATES = {
 
 
 # ------------------------------------------------------------------ جعبه‌ابزار
+def _redirect_split(cmd: str):
+    """«echo متن > فایل» را می‌فهمد — حتی با کوتیشن و < > داخل متن. (متن، مسیر، append)"""
+    q, last = "", -1
+    for i, ch in enumerate(cmd):
+        if q:
+            if ch == q:
+                q = ""
+        elif ch in "\"'":
+            q = ch
+        elif ch == ">":
+            last = i
+    if last < 0:
+        return None
+    left, right = cmd[:last].strip(), cmd[last + 1:].strip()
+    append = left.endswith(">")
+    if append:
+        left = left[:-1].strip()
+    if not left.lower().startswith("echo"):
+        return None
+    text = left[4:].strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'":
+        text = text[1:-1]
+    path = right.strip()
+    if (len(path) >= 2 and path[0] == path[-1] and path[0] in "\"'") or " " not in path:
+        path = path.strip("\"'").strip()
+    else:
+        path = path.split()[0].strip("\"'")
+    if not path:
+        return None
+    return text, path, append
+
+
 class SkillBox:
     """ابزارهای سطح‌سیستم: پکیج، git، HTTP، ffmpeg، اجرا، اسکافولد، مهارت‌ها."""
 
@@ -424,13 +456,14 @@ class SkillBox:
     async def _t_shell(self, command: str = "", timeout: int = 120, **_) -> str:
         cmd = (command or "").strip()
         # «echo متن > فایل» در ویندوز با کوتیشن و < > خطا می‌دهد → خودمان فایل را می‌سازیم
-        m = re.match(r"^echo\s+(?P<text>.+?)\s*>>?\s*(?P<path>[^\s>|]+)\s*$", cmd, re.S)
+        m = _redirect_split(cmd)
         if m:
-            text = m.group("text").strip().strip("'\"").replace("\\n", "\n")
+            text, _path, _append = m
+            text = text.strip().strip("'\"").replace("\\n", "\n").replace("\\t", "\t")
             try:
-                target = self._safe(m.group("path").strip().strip("'\""))
+                target = self._safe(_path)
                 target.parent.mkdir(parents=True, exist_ok=True)
-                prev = target.read_text(encoding="utf-8", errors="replace") if (">>" in cmd and target.exists()) else ""
+                prev = target.read_text(encoding="utf-8", errors="replace") if (_append and target.exists()) else ""
                 target.write_text(prev + text + "\n", encoding="utf-8")
                 return f"فایل ساخته شد: {target.relative_to(self.dir)} ({len(text)} کاراکتر)\n[کد خروج: 0]"
             except Exception as e:  # noqa: BLE001

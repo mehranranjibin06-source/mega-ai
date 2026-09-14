@@ -88,7 +88,79 @@ def extract_tool_calls(text: str, allowed: Optional[set[str]] = None) -> list[di
 
 
 def strip_tool_blocks(text: str) -> str:
-    return re.sub(r"```(?:tool|tool_call)\s*\{.*?\}\s*```", "", text, flags=re.S).strip()
+    """بلوک‌های فراخوانی ابزار (```tool …```) را حذف می‌کند تا کاربر JSON خام نبیند.
+
+    بلوک‌های کد معمولی (```python …) دست‌نخورده می‌مانند.
+    """
+    t = text or ""
+    if "```" not in t:
+        return t.strip()
+    parts = t.split("```")
+    keep: list[str] = []
+    for i, part in enumerate(parts):
+        if i % 2 == 0:
+            keep.append(part)
+            continue
+        head, _, body = part.partition("\n")
+        tag = head.strip().lower()
+        if tag in ("tool", "tool_call") or (tag == "json" and body.lstrip().startswith('{"name"')):
+            continue                      # بلوک ابزار → حذف
+        keep.append("```" + part + "```")
+    return "".join(keep).strip()
+
+
+class ToolFenceFilter:
+    """متنِ در حال پخش مدل را فیلتر می‌کند: داخل بلوک ```tool هرگز به کاربر نشان داده نمی‌شود.
+
+    خروجی: بقیهٔ متن (توضیح، کد معمولی، پاسخ نهایی) همان‌طور پخش می‌شود.
+    """
+
+    def __init__(self, emit):
+        self.emit = emit
+        self.buf = ""
+        self.skip = False
+
+    def feed(self, chunk: str) -> None:
+        if not chunk:
+            return
+        self.buf += chunk
+        for _ in range(200):
+            if self.skip:
+                i = self.buf.find("```")
+                if i < 0:
+                    if len(self.buf) > 4:
+                        self.buf = self.buf[-4:]
+                    return
+                self.buf = self.buf[i + 3:]
+                self.skip = False
+                continue
+            i = self.buf.find("```")
+            if i < 0:
+                if len(self.buf) > 4:
+                    self.emit(self.buf[:-4])
+                    self.buf = self.buf[-4:]
+                return
+            head, rest = self.buf[:i], self.buf[i + 3:]
+            if "\n" not in rest:
+                if head:
+                    self.emit(head)
+                self.buf = "```" + rest
+                return
+            first, body = rest.split("\n", 1)
+            tag = first.strip().lower()
+            if tag in ("tool", "tool_call") or (tag == "json" and body.lstrip().startswith('{"name"')):
+                if head:
+                    self.emit(head)
+                self.buf = body
+                self.skip = True
+                continue
+            self.emit(head + "```" + first + "\n")
+            self.buf = body
+
+    def flush(self) -> None:
+        if self.buf and not self.skip:
+            self.emit(self.buf)
+        self.buf = ""
 
 
 def _try_json(s: str) -> dict | None:

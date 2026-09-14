@@ -117,6 +117,10 @@ async function run(goal) {
   }
 }
 
+function stripTools(t){
+  return (t||"").replace(/```(?:tool|tool_call)[\s\S]*?(?:```|$)/g, "").replace(/\n{3,}/g,"\n\n").replace(/^\s+/,"");
+}
+
 function handle(ev) {
   switch (ev.type) {
     case 'session': break;
@@ -129,7 +133,7 @@ function handle(ev) {
         ev.plan.steps.forEach((s, i) => L('dim', '   ' + (i + 1) + ') ' + (s.title || s.goal || s)));
       }
       break;
-    case 'delta':   stream(ev.text || ''); break;
+    case 'delta':   stream(stripTools(ev.text || '')); break;
     case 'thought': endStream(); if (ev.text) L('ai', ev.text); break;
     case 'step':
       endStream();
