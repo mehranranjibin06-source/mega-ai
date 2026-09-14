@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+APP_VERSION = "7.2"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
+
 ROOT = Path(__file__).resolve().parent.parent
 ENV_PATH = ROOT / ".env"
 WORKSPACE = ROOT / "workspace"

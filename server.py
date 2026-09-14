@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from mega.agent import MegaAgent
-from mega.config import (ENV_PATH, SETTINGS, WEB_DIR, WORKSPACE, configured_providers, key_status,
+from mega.config import (APP_VERSION, ENV_PATH, SETTINGS, WEB_DIR, WORKSPACE, configured_providers, key_status,
                          has_real_keys, real_configured_providers,
                          load_env, save_keys, PROVIDERS)
 from mega.media import THEMES, VOICES, make_ad, make_image, make_video, stt, tts
@@ -222,6 +222,7 @@ async def health():
     s = STATE["settings"]
     return {
         "ok": True,
+        "version": APP_VERSION,
         "demo": not has_real_keys(),
         "demo_model": demo_model.BRIDGE["active"],
         "providers": key_status(),

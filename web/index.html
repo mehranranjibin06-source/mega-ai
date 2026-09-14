@@ -116,6 +116,49 @@
   ::-webkit-scrollbar{width:10px;height:10px}
   ::-webkit-scrollbar-thumb{background:#2a3566;border-radius:9px}
   ::-webkit-scrollbar-track{background:#0b1128}
+  /* ═══ چتِ تازه (طرح «ابرهوش») ═══ */
+  .chatwrap{display:flex;flex-direction:column;border-radius:20px;border:1px solid var(--line);
+        background:linear-gradient(165deg,#161f42,#111936);overflow:hidden}
+  .chathead{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:#0f1631}
+  .chathead b{font-size:14.5px}
+  .ava{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:17px;flex:0 0 auto;
+        background:linear-gradient(135deg,#7c5cff,#22d3ee);color:#0b1020;font-weight:900}
+  .chat{display:flex;flex-direction:column;gap:12px;padding:16px;min-height:46vh;max-height:58vh;overflow:auto}
+  .msg{display:flex;gap:10px;align-items:flex-start}
+  .msg .body{flex:1;min-width:0;line-height:2;font-size:14.5px}
+  .msg.me{flex-direction:row-reverse}
+  .msg.me .body{flex:0 1 auto;max-width:88%;background:linear-gradient(160deg,#222c5c,#1a2450);
+        border:1px solid #3b4790;border-radius:16px;padding:10px 13px}
+  .msg .meta{display:none}
+  .aihead{font-weight:700;font-size:13px;color:#cfd9ff;margin-bottom:6px}
+  .acc{border:1px solid var(--line);border-radius:13px;background:#0f1631;margin:6px 0;overflow:hidden}
+  .acc>.h{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;font-size:13px;color:#aab4dd}
+  .acc>.h:hover{background:#ffffff08;color:var(--txt)}
+  .acc>.b{display:none;padding:10px 12px;border-top:1px solid var(--line)}
+  .acc.open>.b{display:block}
+  .acc .caret{font-size:10px;transition:transform .15s;display:inline-block}
+  .acc.open .caret{transform:rotate(90deg)}
+  .acc .think{font-size:13.5px;color:#b9c4f0;line-height:2;max-height:260px;overflow:auto}
+  .toolc{border:1px solid var(--line);border-radius:12px;margin:8px 0;background:#0b1128;overflow:hidden}
+  .toolc .th{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#131b3a;font-size:13px}
+  .toolc .cmd{margin:0;padding:9px 11px;font-size:12px;direction:ltr;text-align:left;white-space:pre-wrap;
+        word-break:break-word;color:#c9d3ff;max-height:200px;overflow:auto;cursor:pointer;
+        font-family:ui-monospace,Consolas,monospace}
+  .toolc .res{display:none;border-top:1px dashed #2f3a66;padding:8px 11px;font-size:12px;direction:ltr;
+        text-align:left;white-space:pre-wrap;color:#9fb0e8;max-height:220px;overflow:auto;
+        font-family:ui-monospace,Consolas,monospace}
+  .copym{background:transparent;border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:11.5px}
+  .answer{background:#0f1631;border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+  .fcard{display:flex;align-items:center;gap:9px;background:#0f1631;border:1px solid var(--line);
+        border-radius:13px;padding:9px 12px;margin:8px 0}
+  .composer{display:flex;gap:8px;align-items:flex-end;margin-top:12px;position:sticky;bottom:10px;z-index:9;
+        background:linear-gradient(165deg,#161f42,#111936);border:1px solid var(--line);border-radius:18px;padding:9px}
+  .composer textarea{min-height:46px;max-height:160px;flex:1;border-radius:14px;border-color:#2c3768}
+  .composer button{height:44px;min-width:46px;border-radius:13px}
+  .composer #agentRun{background:linear-gradient(135deg,var(--accent),#4f46e5);border:0;font-size:17px}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid #ffffff33;border-top-color:#fff;
+        border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
+  @keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -128,6 +171,7 @@
     <span>MEGA-AI</span><span class="badge">کارگزار مطلق</span>
   </div>
   <span id="statusBadge" class="badge demo">در حال بررسی…</span>
+  <span id="verBadge" class="badge" title="نسخهٔ برنامه">v—</span>
   <div class="grow"></div>
   <nav id="nav">
     <button data-tab="dashboard" class="on">🏠 داشبورد</button>
@@ -206,22 +250,24 @@
 <section id="tab-agent" class="panel-hidden">
   <div class="cols">
     <div>
-      <div class="card">
-        <div class="row" style="margin-bottom:8px">
-          <h3 style="margin:0">🤖 کارگزار مطلق — بگو چه کار کنم</h3><div class="grow"></div>
-          <label class="hint"><input type="checkbox" id="agentRemember" checked> به‌خاطر بسپار</label>
-          <button class="ghost" id="agentNew">🆕 نشست تازه</button>
-        </div>
-        <textarea id="goal" placeholder="مثال‌ها:  • یک تبلیغ ویدیویی ۳۰ ثانیه‌ای برای یک فروشگاه لباس بساز  • یک سایت معرفی خدمات بساز، اجرا کن و تست بگیر  • این عدد را تحلیل کن: میانگین رشد ۵ سال  • یک ربات تلگرام برای سفارش قهوه بنویس و تست کن  • پکیج‌ها را به‌روز کن و یک پروژه‌ی FastAPI بساز"></textarea>
-        <div class="row" style="margin-top:10px">
-          <button class="primary" id="agentRun">🚀 اجرا کن</button>
-          <button class="ghost" id="agentStop" disabled>⏹ توقف</button>
-          <button class="ghost" id="micBtn" title="با صدا بگو">🎙 گفتن</button>
+      <div class="chatwrap">
+        <div class="chathead">
+          <span class="ava">✦</span>
+          <div><b>ابرهوش مهران</b><div class="hint" style="line-height:1.7">هر کاری بگویی انجام می‌دهد — ویدیو، کد، تحلیل، سایت، تبلیغ</div></div>
           <div class="grow"></div>
-          <span class="hint" id="agentStatus"></span>
+          <label class="hint" style="white-space:nowrap"><input type="checkbox" id="agentRemember" checked> حافظه</label>
+          <button class="ghost" id="agentNew" title="نشست تازه">🆕</button>
         </div>
+        <div class="chat" id="agentChat"></div>
       </div>
-      <div class="chat" id="agentChat" style="margin-top:14px"></div>
+      <div class="composer">
+        <textarea id="goal" placeholder="هرچه می‌خواهی بنویس…  (مثلاً: یک تیزر تبلیغ یک‌دقیقه‌ای بساز)"></textarea>
+        <button class="primary" id="agentRun" title="اجرا کن">➤</button>
+        <button class="ghost" id="agentStop" disabled title="توقف">⏹</button>
+        <button class="ghost" id="micBtn" title="با صدا بگو">🎙</button>
+        <div class="grow"></div>
+        <span class="hint" id="agentStatus" style="padding-bottom:12px"></span>
+      </div>
     </div>
     <aside style="display:flex;flex-direction:column;gap:14px">
       <div class="card">
@@ -472,6 +518,7 @@ async function loadHealth(){
   try{
     const d = await (await fetch("/api/health")).json();
     const b = $("#statusBadge");
+    if(d.version) $("#verBadge").textContent = "v"+d.version;
     if(d.demo && d.demo_model){ b.className="badge demo"; b.textContent="حالت نمایشی — کلید API بده تا مدل‌های واقعی وصل شوند"; }
     else if(d.demo){ b.className="badge demo"; b.textContent="کلیدی فعال نیست"; }
     else { b.className="badge good"; b.textContent=`فعال: ${d.active.join(" · ")}`; }
@@ -522,18 +569,68 @@ async function loadHealth(){
 $("#agentNew").onclick = ()=>{ SESSION=""; localStorage.removeItem("mega.agent.session"); $("#agentChat").innerHTML=""; alert("نشست تازه ✅"); };
 $("#agentRun").onclick = runAgent;
 $("#agentStop").onclick = ()=>{ if(AGENT_CTRL) AGENT_CTRL.abort(); };
-$("#goal").addEventListener("keydown", e=>{ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)) runAgent(); });
+$("#goal").addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); runAgent(); } });
 
-function bubble(cls, html){ const d=document.createElement("div"); d.className="bubble "+cls; d.innerHTML=html; $("#agentChat").appendChild(d); d.scrollIntoView({behavior:"smooth",block:"end"}); return d; }
+let LAST_TOOL_CARD = null;
+
+function bubble(cls, html){
+  const d = document.createElement("div");
+  d.className = "msg " + (cls === "me" ? "me" : "ai");
+  d.innerHTML = cls === "me" ? `<div class="body">${html}</div>`
+    : `<span class="ava">✦</span><div class="body">${html}</div>`;
+  $("#agentChat").appendChild(d);
+  d.scrollIntoView({behavior:"smooth", block:"end"});
+  return d;
+}
+function aiMsg(html){ const m = bubble("ai", html || ""); return m.querySelector(".body"); }
+function accBox(container, title, open){
+  const el = document.createElement("div");
+  el.className = "acc" + (open ? " open" : "");
+  el.innerHTML = `<div class="h"><span class="caret">▶</span><span class="t">${title}</span></div><div class="b"></div>`;
+  el.querySelector(".h").onclick = () => el.classList.toggle("open");
+  container.appendChild(el);
+  return el;
+}
+function copyBtn(text){
+  return `<button class="copym" data-t="${esc(text)}" onclick="const b=this;navigator.clipboard.writeText(b.dataset.t||'').then(()=>{b.textContent='✓';setTimeout(()=>b.textContent='📋',900)})">📋</button>`;
+}
+function addToolCard(container, name, args){
+  const card = document.createElement("div");
+  card.className = "toolc";
+  const payload = JSON.stringify(args || {}, null, 1);
+  card.innerHTML = `<div class="th">🔧 <b>${esc(name)}</b><div class="grow"></div>${copyBtn(payload)}</div>
+    <pre class="cmd" title="برای دیدن نتیجه کلیک کن">${esc(payload)}</pre><div class="res"></div>`;
+  const pre = card.querySelector(".cmd"), res = card.querySelector(".res");
+  pre.onclick = () => { res.style.display = res.style.display === "block" ? "none" : "block"; };
+  container.appendChild(card);
+  card.scrollIntoView({behavior:"smooth", block:"end"});
+  LAST_TOOL_CARD = card;
+  return card;
+}
+function fileCard(path, name, size, url){
+  const uid = "fc" + Math.random().toString(36).slice(2, 8);
+  const kind = /\.(mp4|webm)$/i.test(path) ? "video" : (/\.(mp3|wav|ogg|m4a)$/i.test(path) ? "audio" : "img");
+  const wrap = document.createElement("div");
+  wrap.innerHTML = `<div class="fcard">${fileIcon(path)} <b>${esc(name)}</b>
+      <span class="hint">${fmtSize(size)}</span><div class="grow"></div>
+      <a href="${url}" download><button>⬇️ دانلود فایل</button></a>
+      <button class="ghost" onclick="togglePrev('${uid}','${kind}','${url}')">👁 نمایش</button></div>
+    <div id="${uid}"></div>`;
+  $("#agentChat").appendChild(wrap);
+}
+function lastStepEl(stepEl){
+  const ks = Object.keys(stepEl).map(Number).sort((a,b)=>a-b);
+  return ks.length ? stepEl[ks[ks.length-1]] : null;
+}
 
 async function runAgent(){
   const goal = $("#goal").value.trim();
   if(!goal){ alert("خواسته‌ات را بنویس."); return; }
   if(!SESSION){ SESSION="ag-"+Math.random().toString(36).slice(2,10); localStorage.setItem("mega.agent.session",SESSION); }
-  $("#goal").value=""; bubble("me", `<div class="meta">تو</div>${md(goal)}`);
+  $("#goal").value=""; bubble("me", md(goal));
   $("#agentRun").disabled=true; $("#agentStop").disabled=false;
   T0=Date.now(); clearInterval(TIMER);
-  TIMER=setInterval(()=> $("#agentStatus").textContent=`${((Date.now()-T0)/1000).toFixed(0)} ثانیه در حال اجرا…`,500);
+  TIMER=setInterval(()=> $("#agentStatus").textContent=`${((Date.now()-T0)/1000).toFixed(0)} ثانیه…`,500);
   const stepEl={}, toolCount={}; let stepNo=0;
   AGENT_CTRL = new AbortController();
   try{
@@ -550,76 +647,79 @@ async function runAgent(){
         handleAgent(ev, stepEl, toolCount);
       }
     }
-  }catch(e){ if(e.name!=="AbortError") bubble("step",`<div class="err">خطا: ${esc(e.message)}</div>`); }
+  }catch(e){ if(e.name!=="AbortError") aiMsg(`<div class="err">خطا: ${esc(e.message)}</div>`); }
   clearInterval(TIMER); $("#agentStatus").textContent=""; $("#agentRun").disabled=false; $("#agentStop").disabled=true;
   loadFiles(); loadStudioFiles();
 }
 
 function handleAgent(ev, stepEl, toolCount){
   switch(ev.type){
-    case "model": bubble("step", `<div class="meta">مدل اجراکننده</div><b>${esc(ev.name)}</b> <span class="hint">(${esc(ev.provider)})</span>`); break;
+    case "model":
+      aiMsg(`<div class="aihead">🧠 مدل اجراکننده: <b>${esc(ev.name)}</b> <span class="hint">(${esc(ev.provider)})</span></div>`);
+      break;
     case "plan": {
-      const p = ev.plan||{}; const st=(p.steps||[]);
+      const p = ev.plan || {}, st = p.steps || [];
       $("#agentPlan").innerHTML = `<div><b>هدف:</b> ${esc(p.goal||"")}</div>` +
-        st.map(s=>`<div style="margin-top:6px"><span class="pill"><b>${esc(s.n||"•")}</b></span>
-          ${esc(s.action||"")} <span class="hint">${esc(s.tool||"")}</span></div>`).join("") +
-        ((p.deliverables||[]).length? `<div class="hint" style="margin-top:8px">تحویلی‌ها: ${esc(p.deliverables.join(" · "))}</div>`:"");
-      bubble("step",`<div class="meta">🗺 نقشه‌ی اجرا (${st.length} گام)</div>`+ md(st.map((s,i)=>`${s.n||i+1}. ${s.action||""}`).join("\n")));
+        st.map(s=>`<div style="margin-top:6px"><span class="pill"><b>${esc(s.n||"•")}</b></span> ${esc(s.action||"")}</div>`).join("");
+      const box = aiMsg();
+      const a = accBox(box, `🗺 نقشه‌ی اجرا — ${st.length} گام`, false);
+      a.querySelector(".b").innerHTML = md(st.map((s,i)=>`${s.n||i+1}. ${s.action||""}`).join("\n"));
       break; }
     case "step": {
-      stepNo = ev.n;
-      if(ev.state==="start"){
-        stepEl[ev.n] = bubble("step", `<div class="meta"><span class="dot run"></span> گام ${ev.n}</div><pre class="txt"></pre>`);
-        bubble("step", `<div class="meta">گام ${ev.n} — جزئیات اجرا</div><pre class="detail"></pre>`);
+      if(ev.state === "start"){
+        const box = aiMsg();
+        const a = accBox(box, `<span class="spin"></span> فکر و اجرا — گام ${ev.n}`, true);
+        a.querySelector(".b").innerHTML = `<div class="think hint">✍️ در حال نوشتن…</div>`;
+        stepEl[ev.n] = a;
+      } else if(ev.state === "failed"){
+        const a = stepEl[ev.n];
+        if(a) a.querySelector(".h .t").innerHTML = `⚠️ گام ${ev.n} — خطا`;
+        aiMsg(`<div class="err">⚠️ ${esc(ev.error||"خطا")}</div>`);
+      } else if(ev.state === "done"){
+        const a = stepEl[ev.n], tools = toolCount[ev.n] || 0;
+        if(a){
+          a.querySelector(".h .t").innerHTML = `✅ ${esc(ev.text || (ev.n + " انجام شد"))}${tools ? ` · ${tools} دستور` : ""}`;
+          const th = a.querySelector(".think");
+          if(th && (th.dataset.raw || "").trim() === "") th.remove();
+        }
       }
-      if(ev.state==="done"){ const el=stepEl[ev.n]; if(el) el.querySelector(".dot").className="dot done"; }
-      break; }
-    case "thought": {
-      const b = [...$$("#agentChat .bubble")].reverse().find(x=>x.querySelector(".detail"));
-      if(b) b.querySelector(".detail").innerHTML = md(ev.text).replace(/^<p>|<\/p>$/g,"");
       break; }
     case "delta": {
-      const el = stepEl[ev.n]; if(!el) break;
-      const pre = el.querySelector(".txt"); pre.dataset.raw=(pre.dataset.raw||"")+ev.text; pre.textContent=stripTools(pre.dataset.raw);
+      const a = stepEl[ev.n]; if(!a) break;
+      const th = a.querySelector(".think"); if(!th) break;
+      th.dataset.raw = (th.dataset.raw || "") + ev.text;
+      th.textContent = stripTools(th.dataset.raw).slice(0, 1500);
+      break; }
+    case "thought": {
+      const a = stepEl[ev.n]; if(!a) break;
+      const th = a.querySelector(".think"); if(!th) break;
+      const txt = stripTools(ev.text || "");
+      if(txt){ th.innerHTML = md(txt); } else { th.textContent = ""; }
       break; }
     case "tool": {
-      toolCount[ev.n]=(toolCount[ev.n]||0)+1;
-      const b = stepEl[ev.n] || bubble("step", `<div class="meta">گام ${ev.n}</div><pre></pre>`);
-      b.insertAdjacentHTML("beforeend", `<div class="tool">🔧 <b>${esc(ev.name)}</b>
-        ${esc(JSON.stringify(ev.args||{}).slice(0,700))}</div>`);
+      toolCount[ev.n] = (toolCount[ev.n] || 0) + 1;
+      const a = stepEl[ev.n];
+      const container = a ? a.querySelector(".b") : aiMsg();
+      addToolCard(container, ev.name, ev.args || {});
       break; }
     case "tool_result": {
-      const b = stepEl[ev.n] || stepEl[Object.keys(stepEl).pop()];
-      if(b) b.insertAdjacentHTML("beforeend", `<div class="tool">↳ ${esc(String(ev.result||"").slice(0,1600))}</div>`);
+      if(LAST_TOOL_CARD){
+        const r = LAST_TOOL_CARD.querySelector(".res");
+        r.textContent = (r.textContent ? r.textContent + "\n\n" : "") + String(ev.result || "").slice(0, 4000);
+      }
       break; }
-    case "artifact": {
-      const icon = fileIcon(ev.path);
-      bubble("step", `<div class="meta">📦 فایل ساخته شد</div>${icon} <a href="${ev.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(ev.path))}" download>⬇️ ${esc(ev.name||ev.path)}</a>
-        <span class="hint">(${fmtSize(ev.size)})</span>`);
-      loadFiles(); break; }
-    case "error": bubble("step", `<div class="err">⚠️ ${esc(ev.message)}</div>`); break;
+    case "artifact":
+      fileCard(ev.path, ev.name || ev.path, ev.size || 0,
+               ev.url || ("/files/" + encodeURI(SESSION) + "/" + encodeURI(ev.path)));
+      loadFiles();
+      break;
+    case "error": aiMsg(`<div class="err">⚠️ ${esc(ev.message)}</div>`); break;
     case "final": {
-      bubble("step", `<div class="meta">✅ نتیجه — ${ev.steps} گام · ${ev.seconds} ثانیه · مدل ${esc(ev.model||"")}</div>` + md(ev.text));
+      const box = aiMsg(`<div class="aihead">✦ ابرهوش مهران — تمام شد${ev.steps?` · ${ev.steps} گام`:""}${ev.seconds?` · ${ev.seconds} ثانیه`:""}</div>
+        <div class="answer">${md(stripTools(ev.text||""))}</div>`);
       break; }
   }
 }
-
-/* ── فایل‌ها */
-async function loadFiles(){
-  try{
-    const d = await (await fetch("/api/artifacts"+(SESSION?`?session=${encodeURIComponent(SESSION)}`:""))).json();
-    const items = d.items||[];
-    $("#fileList").innerHTML = items.length? items.slice(0,60).map(f=>`
-      <div class="file">${fileIcon(f.name)}<span class="n"><a href="${f.url}" download>${esc(f.path)}</a></span>
-      <span class="s">${fmtSize(f.size)}</span></div>`).join("") : `<span class="hint">هنوز فایلی ساخته نشده.</span>`;
-  }catch(e){}
-}
-$("#refreshFiles").onclick = loadFiles;
-
-/* ═══════════ پنل خبرگان ═══════════ */
-$$("#modes button").forEach(b=> b.onclick=()=>{ $$("#modes button").forEach(x=>{x.classList.remove("primary");x.classList.add("ghost");}); b.classList.add("primary"); b.classList.remove("ghost"); MODE=b.dataset.mode; });
-$("#send").onclick = runCouncil; $("#stop").onclick = ()=>{ if(COUNCIL_CTRL) COUNCIL_CTRL.abort(); };
-$("#copyFinal").onclick = ()=>{ navigator.clipboard.writeText($("#final").innerText); };
 
 function stageEl(id, role, title, model, provider){
   let el=document.getElementById("st-"+id); if(el) return el;
