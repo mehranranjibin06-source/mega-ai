@@ -598,6 +598,12 @@ function addToolCard(container, name, args){
   const card = document.createElement("div");
   card.className = "toolc";
   const payload = JSON.stringify(args || {}, null, 1);
+  if(name === "finish" && args && args.answer){
+    const files = (args.files || []).map(f=>`<span class="pill">📄 ${esc(f)}</span>`).join(" ");
+    card.innerHTML = `<div class="th">✅ <b>جمع‌بندی و پایان کار</b><div class="grow"></div>${copyBtn(args.answer)}</div>
+      <div style="padding:8px 11px;font-size:13.5px;line-height:2">${md(args.answer)}${files?`<div style="margin-top:6px">${files}</div>`:""}</div>`;
+    container.appendChild(card); LAST_TOOL_CARD = card; return card;
+  }
   card.innerHTML = `<div class="th">🔧 <b>${esc(name)}</b><div class="grow"></div>${copyBtn(payload)}</div>
     <pre class="cmd" title="برای دیدن نتیجه کلیک کن">${esc(payload)}</pre><div class="res"></div>`;
   const pre = card.querySelector(".cmd"), res = card.querySelector(".res");
@@ -720,6 +726,25 @@ function handleAgent(ev, stepEl, toolCount){
       break; }
   }
 }
+
+/* ── فایل‌های نشست ── */
+async function loadFiles(){
+  try{
+    const d = await (await fetch("/api/artifacts"+(SESSION?`?session=${encodeURIComponent(SESSION)}`:""))).json();
+    const items = d.items||[];
+    const box = $("#fileList"); if(!box) return;
+    box.innerHTML = items.length? items.slice(0,60).map(f=>`
+      <div class="file">${fileIcon(f.name)}<span class="n"><a href="${f.url}" download>${esc(f.path||f.name)}</a></span>
+      <span class="s">${fmtSize(f.size)}</span></div>`).join("") : `<span class="hint">هنوز فایلی ساخته نشده.</span>`;
+  }catch(e){}
+}
+const _rf = $("#refreshFiles"); if(_rf) _rf.onclick = loadFiles;
+
+/* ═══════════ پنل خبرگان ═══════════ */
+$$("#modes button").forEach(b=> b.onclick=()=>{ $$("#modes button").forEach(x=>{x.classList.remove("primary");x.classList.add("ghost");}); b.classList.add("primary"); b.classList.remove("ghost"); MODE=b.dataset.mode; });
+const _send = $("#send"); if(_send) _send.onclick = runCouncil;
+const _stop = $("#stop"); if(_stop) _stop.onclick = ()=>{ if(COUNCIL_CTRL) COUNCIL_CTRL.abort(); };
+const _cf = $("#copyFinal"); if(_cf) _cf.onclick = ()=>{ navigator.clipboard.writeText($("#final").innerText); };
 
 function stageEl(id, role, title, model, provider){
   let el=document.getElementById("st-"+id); if(el) return el;
