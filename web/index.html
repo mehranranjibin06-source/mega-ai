@@ -214,6 +214,7 @@
     <a href="/tv" style="text-decoration:none"><button type="button">📺 تلویزیون</button></a>
     <a href="/more" style="text-decoration:none"><button type="button">✨ افزودنی‌ها</button></a>
     <a href="/terminal" style="text-decoration:none"><button type="button">🖥 ترمینال</button></a>
+    <button type="button" onclick="histOpen()" title="همهٔ پرامپت‌هایی که داده‌ای">📜 تاریخچه</button>
     <button type="button" id="updBtn" onclick="updOpen()" title="گرفتن نسخهٔ تازه از گیت‌هاب">🔄 آپدیت</button>
   </nav>
 </header>
@@ -312,6 +313,16 @@
       <div class="card">
         <h3>🗺 نقشه‌ی اجرا</h3>
         <div id="agentPlan" class="hint">با اجرای اولین کار اینجا پر می‌شود.</div>
+      </div>
+    
+      <div class="card" id="histCard">
+        <h3>📜 تاریخچهٔ پرامپت‌های من <span class="hint" id="histCount"></span></h3>
+        <div id="histInline" class="files" style="max-height:300px"><span class="hint">⏳ در حال خواندن…</span></div>
+        <div class="row" style="margin-top:8px">
+          <button class="ghost" onclick="histReload()">↻ بازخوانی</button>
+          <button class="ghost" onclick="histClearAll()" style="border-color:#7a2f3f;color:#ffb4c2">🗑 پاک کردن همه</button>
+        </div>
+        <div class="hint" style="margin-top:6px">روی هر پرامپت بزن تا دوباره در کادر نوشتن بیاید.</div>
       </div>
     </aside>
   </div>
@@ -720,6 +731,8 @@ document.addEventListener("keydown", e => { if(e.key === "Escape") closeViewer()
 
 
 /* ═══════════ تاریخچه و پاک‌سازی ═══════════ */
+let HIST_CACHE = [];
+
 function histOpen(){
   const m = $("#histModal"); if(!m) return;
   m.classList.add("on"); histReload();
@@ -731,6 +744,8 @@ async function histReload(){
   try{
     const d = await (await fetch("/api/history")).json();
     const items = d.items || [], sess = d.sessions || [];
+    HIST_CACHE = items;
+    renderInlineHist(items);
     $("#histMeta").textContent = `${items.length} پرامپت · ${sess.length} نشست`;
     if(!items.length && !sess.length){ box.innerHTML = `<span class="hint">تاریخچه خالی است.</span>`; return; }
     box.innerHTML =
@@ -742,15 +757,51 @@ async function histReload(){
           <button class="ghost" style="padding:5px 10px;border-radius:10px" onclick="histLoad('${esc(s.id)}')">باز کردن</button>
           <button class="del" onclick="histDelSession('${esc(s.id)}')">🗑</button>
         </div>`).join("") : "") +
-      `<div class="hsec">پرامپت‌ها (جدیدترین اول)</div>` + items.map(r=>`
-        <div class="hrow">
-          <span>💬</span>
-          <div class="txt"><div>${esc(r.prompt).slice(0,120)}</div>
-            <small>${when(r.created)} · ${esc(r.mode||r.task_type||"")}</small></div>
-          <button class="del" onclick="histDelRun(${r.id})">🗑</button>
-        </div>`).join("");
+      `<div class="hsec">پرامپت‌ها (جدیدترین اول) — 🗑 = پاک کردن · ↙ = استفاده دوباره</div>`
+      + items.map(r => histItemHTML(r)).join("");
   }catch(e){ box.innerHTML = `<span class="err">خطا: ${esc(e.message)}</span>`; }
 }
+function toast(msg){
+  let t = document.querySelector("#toastBox");
+  if(!t){
+    t = document.createElement("div");
+    t.id = "toastBox";
+    t.style.cssText = "position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:99;display:flex;gap:8px;flex-direction:column;align-items:center";
+    document.body.appendChild(t);
+  }
+  const d = document.createElement("div");
+  d.style.cssText = "background:#131b3a;border:1px solid #26305a;color:#e9edff;border-radius:12px;padding:9px 15px;font-size:13.5px;box-shadow:0 10px 26px #0008";
+  d.textContent = msg;
+  t.appendChild(d);
+  setTimeout(()=>{ d.style.opacity = "0"; d.style.transition = "opacity .4s"; setTimeout(()=>d.remove(), 400); }, 2600);
+}
+
+/* تاریخچهٔ همیشه‌در‌دید (کنار صفحه) + پنجرهٔ کامل */
+function histItemHTML(r, compact){
+  const p = esc(r.prompt || "");
+  return `<div class="hrow" style="margin-bottom:6px">
+      <span>💬</span>
+      <div class="txt"><div title="${p}">${p}</div><small>${when(r.created)}${r.mode ? " · " + esc(r.mode) : ""}</small></div>
+      <button class="ghost" style="padding:5px 9px;border-radius:10px" onclick="histUse(${r.id})">↙ استفاده</button>
+      <button class="del" onclick="histDelRun(${r.id})">🗑</button>
+    </div>`;
+}
+function histUse(id){
+  const r = HIST_CACHE.find(x => x.id === id);
+  if(!r) return;
+  const box = document.querySelector("#goal") || document.querySelector("#ask");
+  if(box){ box.value = r.prompt; box.focus(); box.scrollIntoView({behavior:"smooth", block:"center"}); }
+  histClose();
+}
+function renderInlineHist(items){
+  const box = document.querySelector("#histInline");
+  if(!box) return;
+  const c = document.querySelector("#histCount");
+  if(c) c.textContent = items.length ? `(${items.length})` : "";
+  box.innerHTML = items.length ? items.slice(0, 25).map(r => histItemHTML(r, true)).join("")
+    : `<span class="hint">هنوز چیزی نپرسیده‌ای. هرچه بنویسی همین‌جا می‌ماند و بعداً پیدا می‌کنی.</span>`;
+}
+
 function when(ts){
   if(!ts) return "";
   const d = new Date(ts*1000), now = Date.now()/1000;
@@ -765,18 +816,19 @@ async function histPost(body){
 }
 async function histDelRun(id){
   if(!confirm("این پرامپت پاک شود؟")) return;
-  const d = await histPost({action:"delete_run", id}); alert(d.message||"پاک شد");
-  histReload(); loadDash && loadDash();
+  const d = await histPost({action:"delete_run", id});
+  toast(d.message||"پاک شد");
+  histReload(); typeof loadDash === "function" && loadDash();
 }
 async function histDelSession(sid){
   if(!confirm("کل این نشست با همهٔ پرامپت‌هایش پاک شود؟")) return;
-  const d = await histPost({action:"delete_session", session:sid}); alert(d.message||"پاک شد");
-  histReload();
+  const d = await histPost({action:"delete_session", session:sid});
+  toast(d.message||"پاک شد"); histReload();
 }
 async function histClearAll(){
   if(!confirm("همهٔ تاریخچه و پرامپت‌ها پاک شود؟ (فایل‌های ساخته‌شده دست نمی‌خورند)")) return;
-  const d = await histPost({action:"clear"}); alert(d.message||"پاک شد");
-  histReload();
+  const d = await histPost({action:"clear"});
+  toast(d.message||"پاک شد"); histReload();
 }
 function histLoad(sid){
   SESSION = sid; localStorage.setItem("mega.agent.session", sid);
@@ -832,6 +884,7 @@ async function doRestart(){
   setTimeout(()=>{ try{ location.reload(); }catch(e){} }, 14000);
 }
 document.addEventListener("keydown", e => { if(e.key === "Escape"){ histClose(); updClose(); } });
+window.addEventListener("load", function(){ try{ histReload(); }catch(e){} });
 
 function lastStepEl(stepEl){
   const ks = Object.keys(stepEl).map(Number).sort((a,b)=>a-b);

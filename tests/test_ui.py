@@ -232,3 +232,29 @@ def test_reasoning_models_handled() -> None:
     acc2, rea2 = [], []
     _extract("openai", {"choices": [{"message": {"reasoning": "فکر"}}]}, acc2, rea2)
     assert (acc2 or rea2), "پاسخ خالی برگشت"
+
+
+def test_history_inline_panel() -> None:
+    """تاریخچه باید داخل خود صفحه دیده شود (نه فقط پنجرهٔ مخفی) و دکمهٔ پاک کردن داشته باشد."""
+    for page in ("index.html", "simple.html"):
+        html = (WEB / page).read_text(encoding="utf-8")
+        js = _js(html)
+        assert 'id="histInline"' in html, f"{page}: پنل تاریخچهٔ کنار صفحه نیست"
+        assert 'id="histCount"' in html, f"{page}: شمارندهٔ تاریخچه نیست"
+        for fn in ("histItemHTML", "renderInlineHist", "histUse", "toast"):
+            assert fn in js, f"{page}: تابع {fn} نیست"
+        assert "histClearAll()" in html, f"{page}: دکمهٔ پاک کردن همه نیست"
+
+
+def test_history_nav_button() -> None:
+    """دکمهٔ تاریخچه باید در نوار بالا باشد تا پیدا شود."""
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    nav = html[html.index('<nav id="nav">'):html.index("</nav>")]
+    assert "histOpen()" in nav, "دکمهٔ تاریخچه در نوار بالا نیست"
+    assert "updOpen()" in nav, "دکمهٔ آپدیت در نوار بالا نیست"
+
+
+def test_console_updater_exists() -> None:
+    root = Path(__file__).resolve().parents[1]
+    s = (root / "update_self.py").read_text(encoding="utf-8")
+    assert "updater.update" in s and "--restart" in s
