@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-APP_VERSION = "8.3"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
+APP_VERSION = "8.4"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
 
 ROOT = Path(__file__).resolve().parent.parent
 ENV_PATH = ROOT / ".env"

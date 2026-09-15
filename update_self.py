@@ -28,7 +28,41 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+def _find_app_root() -> Path:
+    """پوشهٔ اصلی برنامه را پیدا می‌کند — حتی اگر این فایل داخل workspace یا کش دانلود شده باشد.
+
+    ترتیب: مسیر داده‌شده با --root → بالا رفتن از محل خود فایل → بالا رفتن از محل اجرا
+    → آدرس‌های معمول ویندوز.
+    """
+    marker = "start_vps.py"
+
+    def ok(d: Path) -> bool:
+        return (d / marker).is_file() and (d / "mega" / "config.py").is_file()
+
+    if "--root" in sys.argv:
+        try:
+            d = Path(sys.argv[sys.argv.index("--root") + 1]).expanduser()
+            if ok(d):
+                return d
+        except Exception:
+            pass
+    for start in (Path(__file__).resolve().parent, Path.cwd().resolve()):
+        d = start
+        for _ in range(6):
+            if ok(d):
+                return d
+            if d.parent == d:
+                break
+            d = d.parent
+    home = Path.home()
+    for cand in (home / "mega-ai-main", home / "mega-ai", home / "Desktop" / "mega-ai-main",
+                 home / "Downloads" / "mega-ai-main", Path("C:/mega-ai-main"), Path("C:/mega-ai")):
+        if ok(cand):
+            return cand
+    return Path(__file__).resolve().parent      # آخرین راه: کنار همین فایل
+
+
+ROOT = _find_app_root()
 OWNER = "mehranranjibin06-source"
 REPO = "mega-ai"
 BRANCH = "main"
@@ -253,6 +287,7 @@ def main() -> int:
     before = current_version()
     print("=" * 66)
     print(f"  MehranAiShabestar — آپدیت خودکار      (نسخهٔ فعلی: v{before})")
+    print(f"  پوشهٔ برنامه: {ROOT}")
     print("=" * 66)
     changed: list[str] = []
     src = ""
