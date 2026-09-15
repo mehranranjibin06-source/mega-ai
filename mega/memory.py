@@ -139,6 +139,66 @@ class Memory:
             models = c.execute("SELECT COUNT(DISTINCT model) n FROM stages").fetchone()["n"]
         return {"runs": runs, "stages": stages, "models": models}
 
+
+    # ------------------------------------------------- پاک‌سازی و تاریخچه
+    def prompts(self, session_id: str = "", limit: int = 200) -> list[dict]:
+        """تاریخچهٔ پرامپت‌ها (همه‌ی نشست‌ها یا فقط یک نشست)."""
+        with self._conn() as c:
+            if session_id:
+                rows = c.execute(
+                    "SELECT id, session_id, prompt, task_type, mode, created, final "
+                    "FROM runs WHERE session_id=? ORDER BY id DESC LIMIT ?",
+                    (session_id, limit)).fetchall()
+            else:
+                rows = c.execute(
+                    "SELECT id, session_id, prompt, task_type, mode, created, final "
+                    "FROM runs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            d["final"] = (d.get("final") or "")[:400]
+            out.append(d)
+        return out
+
+    def session_list(self, limit: int = 50) -> list[dict]:
+        """نشست‌ها + تعداد پرامپت هرکدام + آخرین پرامپت (برای پنجرهٔ تاریخچه)."""
+        with self._conn() as c:
+            rows = c.execute(
+                "SELECT s.id, s.title, s.created, s.updated, "
+                "  (SELECT COUNT(*) FROM runs r WHERE r.session_id = s.id) AS n, "
+                "  (SELECT prompt FROM runs r WHERE r.session_id = s.id ORDER BY id DESC LIMIT 1) AS last_prompt "
+                "FROM sessions s ORDER BY s.updated DESC LIMIT ?", (limit,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def delete_run(self, run_id: int) -> int:
+        """پاک کردن یک پرامپت (و مراحلش)."""
+        with self._conn() as c:
+            c.execute("DELETE FROM stages WHERE run_id=?", (run_id,))
+            cur = c.execute("DELETE FROM runs WHERE id=?", (run_id,))
+        return cur.rowcount or 0
+
+    def delete_session(self, session_id: str) -> int:
+        """پاک کردن یک نشست کامل با همهٔ پرامپت‌هایش."""
+        with self._conn() as c:
+            ids = [r["id"] for r in c.execute("SELECT id FROM runs WHERE session_id=?", (session_id,)).fetchall()]
+            if ids:
+                q = ",".join("?" * len(ids))
+                c.execute(f"DELETE FROM stages WHERE run_id IN ({q})", ids)
+                c.execute(f"DELETE FROM runs WHERE id IN ({q})", ids)
+            c.execute("DELETE FROM sessions WHERE id=?", (session_id,))
+        return len(ids)
+
+    def clear_history(self, keep_learning: bool = True) -> dict:
+        """همهٔ پرامپت‌ها و نشست‌ها را پاک می‌کند (امتیاز مدل‌ها می‌تواند بماند)."""
+        with self._conn() as c:
+            runs = c.execute("SELECT COUNT(*) n FROM runs").fetchone()["n"]
+            c.execute("DELETE FROM stages")
+            c.execute("DELETE FROM runs")
+            c.execute("DELETE FROM sessions")
+            if not keep_learning:
+                c.execute("DELETE FROM scores")
+        return {"deleted_runs": runs}
+
     def run_detail(self, run_id: int) -> dict:
         with self._conn() as c:
             run = c.execute("SELECT * FROM runs WHERE id=?", (run_id,)).fetchone()

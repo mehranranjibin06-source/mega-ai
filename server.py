@@ -378,9 +378,46 @@ async def set_settings(payload: dict):
 
 
 @app.get("/api/history")
-async def history(session: str = "", limit: int = 20):
-    return {"ok": True, "sessions": MEMORY.sessions(), "leaderboard": MEMORY.leaderboard(),
-            "stats": MEMORY.stats()}
+async def history(session: str = "", limit: int = 200):
+    """تاریخچه: پرامپت‌ها (همه یا یک نشست) + فهرست نشست‌ها + امتیازها."""
+    return {"ok": True, "sessions": MEMORY.session_list(60), "items": MEMORY.prompts(session, limit),
+            "leaderboard": MEMORY.leaderboard(), "stats": MEMORY.stats()}
+
+
+@app.post("/api/history")
+async def history_change(payload: dict):
+    """پاک کردن: یک پرامپت (delete_run) · یک نشست (delete_session) · همه‌چیز (clear)."""
+    action = str(payload.get("action") or "clear")
+    if action == "delete_run":
+        n = MEMORY.delete_run(int(payload.get("id") or 0))
+        return {"ok": True, "deleted": n, "message": f"{n} مورد پاک شد"}
+    if action == "delete_session":
+        n = MEMORY.delete_session(str(payload.get("session") or ""))
+        return {"ok": True, "deleted": n, "message": f"نشست پاک شد ({n} پرامپت)"}
+    if action in ("clear", "clear_all"):
+        res = MEMORY.clear_history(keep_learning=bool(payload.get("keep_learning", True)))
+        return {"ok": True, **res, "message": f"همه‌ی تاریخچه پاک شد ({res['deleted_runs']} پرامپت)"}
+    return JSONResponse({"ok": False, "error": "دستور ناشناخته"}, status_code=400)
+
+
+@app.post("/api/update")
+async def api_update(payload: dict = None):
+    """🔄 گرفتن نسخهٔ تازه از گیت‌هاب و نصبش (بدون دست‌زدن به .env و داده‌ها)."""
+    from mega import updater
+    return await asyncio.to_thread(updater.update, bool((payload or {}).get("force")))
+
+
+@app.get("/api/version")
+async def api_version():
+    from mega import updater
+    return {"ok": True, "version": updater.current_version()}
+
+
+@app.post("/api/restart")
+async def api_restart():
+    """ری‌استارت خودکار همین برنامه (ربات متاتریدر دست نمی‌خورد)."""
+    from mega import updater
+    return await asyncio.to_thread(updater.restart)
 
 
 @app.get("/api/run/{run_id}")

@@ -143,3 +143,52 @@ def test_file_card_shows_media_first() -> None:
     block = block[:block.index("function lastStepEl(")]
     assert 'if(kind === "media")' in block, "کارت فایل رسانه‌ای مسیر نمایش بالا ندارد"
     assert 'class="media"' in block, "کادر media در کارت فایل نیست"
+
+
+def test_history_ui_present() -> None:
+    """تاریخچه و پاک‌سازی باید در رابط باشد."""
+    for page in ("index.html", "simple.html"):
+        html = (WEB / page).read_text(encoding="utf-8")
+        js = _js(html)
+        assert 'id="histModal"' in html, f"{page}: پنجرهٔ تاریخچه نیست"
+        for fn in ("histOpen", "histReload", "histDelRun", "histDelSession", "histClearAll", "clearChat"):
+            assert fn in js, f"{page}: تابع {fn} نیست"
+
+
+def test_update_ui_present() -> None:
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    js = _js(html)
+    assert 'id="updModal"' in html, "پنجرهٔ آپدیت نیست"
+    for fn in ("updOpen", "doUpdate", "doRestart"):
+        assert fn in js, f"تابع {fn} نیست"
+
+
+def test_history_endpoints() -> None:
+    src = (Path(__file__).resolve().parents[1] / "server.py").read_text(encoding="utf-8")
+    for route in ('@app.get("/api/history")', '@app.post("/api/history")',
+                  '@app.post("/api/update")', '@app.post("/api/restart")',
+                  '@app.get("/api/version")'):
+        assert route in src, f"مسیر {route} نیست"
+
+
+def test_updater_safe_copy() -> None:
+    """آپدیت نباید به .env و data و workspace دست بزند."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from mega import updater
+    assert ".env" in updater.KEEP_FILES
+    for d in ("data", "workspace", ".venv", ".git"):
+        assert d in updater.KEEP_DIRS, f"{d} در فهرست محفوظ‌ها نیست"
+    assert len(updater.MIRRORS) >= 3, "آینه‌های دانلود کم است"
+
+
+def test_restart_script_targets_only_self() -> None:
+    """اسکریپت ری‌استارت باید فقط PID خودمان را ببندد (ربات MT5 دست نخورد)."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from mega import updater
+    win = updater._script(False, 12345)
+    posix = updater._script(True, 12345)
+    assert "12345" in win and "taskkill /F /PID 12345" in win
+    assert "python.exe" not in win.replace("python start_vps.py", ""), "نباید همهٔ پایتون‌ها را ببندد"
+    assert "kill -TERM 12345" in posix

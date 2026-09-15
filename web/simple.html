@@ -104,6 +104,23 @@
   .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
   .gallery a{display:block;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#0b1128}
   .gallery img{width:100%;height:82px;object-fit:cover;display:block}
+  /* ═══ تاریخچه و آپدیت ═══ */
+  .modal{position:fixed;inset:0;z-index:80;background:#040714cc;backdrop-filter:blur(6px);
+        display:none;align-items:center;justify-content:center;padding:10px}
+  .modal.on{display:flex}
+  .sheet{width:min(760px,100%);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+        background:linear-gradient(165deg,#161f42,#111936);border:1px solid var(--line);border-radius:18px}
+  .sheet .top{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid var(--line)}
+  .sheet .cnt{flex:1;overflow:auto;padding:12px}
+  .hrow{display:flex;align-items:center;gap:9px;background:#0f1631;border:1px solid var(--line);
+        border-radius:13px;padding:9px 11px;margin-bottom:7px}
+  .hrow .txt{flex:1;min-width:0;font-size:13.5px;line-height:1.9}
+  .hrow .txt small{color:var(--dim);font-size:11.5px}
+  .hrow .txt div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hrow .del{background:#3a1620;border-color:#7a2f3f;color:#ffb4c2;padding:5px 10px;border-radius:10px;font-size:12.5px}
+  .hsec{font-size:12.5px;color:var(--dim);margin:12px 0 7px}
+  .upd{display:flex;align-items:center;gap:8px;background:#0f1631;border:1px solid var(--line);
+        border-radius:13px;padding:10px 12px;font-size:13.5px}
 </style>
 </head>
 <body>
@@ -585,6 +602,127 @@ function closeViewer(){
 }
 document.addEventListener("keydown", e => { if(e.key === "Escape") closeViewer(); });
 
+/* ═══════════ تاریخچه و پاک‌سازی ═══════════ */
+function histOpen(){
+  const m = $("#histModal"); if(!m) return;
+  m.classList.add("on"); histReload();
+}
+function histClose(){ const m = $("#histModal"); if(m) m.classList.remove("on"); }
+async function histReload(){
+  const box = $("#histList"); if(!box) return;
+  box.innerHTML = '<span class="hint">⏳ در حال خواندن…</span>';
+  try{
+    const d = await (await fetch("/api/history")).json();
+    const items = d.items || [], sess = d.sessions || [];
+    $("#histMeta").textContent = `${items.length} پرامپت · ${sess.length} نشست`;
+    if(!items.length && !sess.length){ box.innerHTML = `<span class="hint">تاریخچه خالی است.</span>`; return; }
+    box.innerHTML =
+      (sess.length? `<div class="hsec">نشست‌ها</div>` + sess.map(s=>`
+        <div class="hrow">
+          <span>🗂</span>
+          <div class="txt"><div>${esc(s.title||s.last_prompt||s.id)}</div>
+            <small>${when(s.updated)} · ${s.n||0} پرامپت</small></div>
+          <button class="ghost" style="padding:5px 10px;border-radius:10px" onclick="histLoad('${esc(s.id)}')">باز کردن</button>
+          <button class="del" onclick="histDelSession('${esc(s.id)}')">🗑</button>
+        </div>`).join("") : "") +
+      `<div class="hsec">پرامپت‌ها (جدیدترین اول)</div>` + items.map(r=>`
+        <div class="hrow">
+          <span>💬</span>
+          <div class="txt"><div>${esc(r.prompt).slice(0,120)}</div>
+            <small>${when(r.created)} · ${esc(r.mode||r.task_type||"")}</small></div>
+          <button class="del" onclick="histDelRun(${r.id})">🗑</button>
+        </div>`).join("");
+  }catch(e){ box.innerHTML = `<span class="err">خطا: ${esc(e.message)}</span>`; }
+}
+function when(ts){
+  if(!ts) return "";
+  const d = new Date(ts*1000), now = Date.now()/1000;
+  const diff = now - ts;
+  if(diff < 3600) return Math.max(1, Math.round(diff/60)) + " دقیقه پیش";
+  if(diff < 86400) return Math.round(diff/3600) + " ساعت پیش";
+  return Math.round(diff/86400) + " روز پیش";
+}
+async function histPost(body){
+  const r = await fetch("/api/history",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+  return r.json();
+}
+async function histDelRun(id){
+  if(!confirm("این پرامپت پاک شود؟")) return;
+  const d = await histPost({action:"delete_run", id}); alert(d.message||"پاک شد");
+  histReload(); loadDash && loadDash();
+}
+async function histDelSession(sid){
+  if(!confirm("کل این نشست با همهٔ پرامپت‌هایش پاک شود؟")) return;
+  const d = await histPost({action:"delete_session", session:sid}); alert(d.message||"پاک شد");
+  histReload();
+}
+async function histClearAll(){
+  if(!confirm("همهٔ تاریخچه و پرامپت‌ها پاک شود؟ (فایل‌های ساخته‌شده دست نمی‌خورند)")) return;
+  const d = await histPost({action:"clear"}); alert(d.message||"پاک شد");
+  histReload();
+}
+function histLoad(sid){
+  SESSION = sid; localStorage.setItem("mega.agent.session", sid);
+  histClose(); alert("این نشست فعال شد؛ گفت‌وگوهای بعدی در همین نشست ذخیره می‌شوند.");
+}
+function clearChat(){
+  if(!confirm("گفت‌وگوی روی صفحه پاک شود؟ (تاریخچهٔ سرور دست نمی‌خورد)")) return;
+  const c = $("#chat"); if(c) c.innerHTML = "";
+}
+function clearAll(){
+  if(!confirm("روی صفحه پاک شود و نشست تازه شروع شود؟")) return;
+  SESSION = ""; localStorage.removeItem("mega.agent.session");
+  loadFiles && loadFiles();
+}
+
+/* ═══════════ آپدیت برنامه ═══════════ */
+function updOpen(){ const m = $("#updModal"); if(m) m.classList.add("on"); }
+function updClose(){ const m = $("#updModal"); if(m) m.classList.remove("on"); }
+async function doUpdate(){
+  const b = $("#updBody"), btn = $("#updGo");
+  if(btn) btn.disabled = true;
+  b.innerHTML = '<div class="upd"><span class="spin"></span> در حال دانلود نسخهٔ تازه از گیت‌هاب…</div>' +
+                '<div class="hint" style="margin-top:8px">ممکن است تا ۲ دقیقه طول بکشد.</div>';
+  try{
+    const d = await (await fetch("/api/update",{method:"POST",headers:{"content-type":"application/json"},body:"{}"})).json();
+    if(!d.ok){
+      b.innerHTML = `<div class="err">⚠️ ${esc(d.error||"آپدیت نشد")}</div>
+        <div class="hint" style="margin-top:8px">اگر اینترنت قطع و وصل می‌شود، چند لحظه بعد دوباره بزن.</div>
+        <div class="row" style="margin-top:10px"><button class="primary" onclick="doUpdate()">🔁 تلاش دوباره</button></div>`;
+      if(btn) btn.disabled = false; return;
+    }
+    b.innerHTML = `<div class="upd">✅ نسخهٔ نصب‌شده: <b>v${esc(d.before)} → v${esc(d.after)}</b>
+        ${d.count? ` · ${d.count} فایل به‌روز شد`:""}</div>
+      ${d.need_restart ? `<div class="hint" style="margin-top:8px">برای فعال شدن نسخهٔ تازه، یک ری‌استارت لازم است.</div>
+        <div class="row" style="margin-top:10px">
+          <button class="primary" onclick="doRestart()">🔄 ری‌استارت کن</button>
+          <button class="ghost" onclick="updClose()">بعداً</button></div>`
+      : `<div class="hint" style="margin-top:8px">همه‌چیز به‌روز است.</div>`}`;
+  }catch(e){
+    b.innerHTML = `<div class="err">خطا: ${esc(e.message)}</div>
+      <div class="row" style="margin-top:10px"><button class="primary" onclick="doUpdate()">🔁 تلاش دوباره</button></div>`;
+    if(btn) btn.disabled = false;
+  }
+}
+async function doRestart(){
+  const b = $("#updBody");
+  b.innerHTML = '<div class="upd"><span class="spin"></span> در حال ری‌استارت…</div>';
+  try{ await fetch("/api/restart",{method:"POST",headers:{"content-type":"application/json"},body:"{}"}); }catch(e){}
+  b.innerHTML = `<div class="upd">✅ ری‌استارت شد.</div>
+    <div class="hint" style="margin-top:8px">۱۵ ثانیه صبر کن، بعد این صفحه را دوباره باز کن (یا رفرش کن).</div>`;
+  setTimeout(()=>{ try{ location.reload(); }catch(e){} }, 14000);
+}
+document.addEventListener("keydown", e => { if(e.key === "Escape"){ histClose(); updClose(); } });
+function clearChat(){
+  if(!confirm("گفت‌وگوی روی صفحه پاک شود؟ (تاریخچهٔ سرور دست نمی‌خورد)")) return;
+  const c = $("#chat"); if(c) c.innerHTML = "";
+}
+function clearAll(){
+  if(!confirm("روی صفحه پاک شود و نشست تازه شروع شود؟")) return;
+  SESSION = ""; localStorage.removeItem("mega.simple.session");
+  const c = $("#chat"); if(c) c.innerHTML = "";
+}
+
 function busy(t){ $("#busy").textContent = t; $("#mainProgress").classList.toggle("on", !!t); }
 function setRunning(on){ $("#btnQuick").disabled=on; $("#btnSmart").disabled=on; $("#btnDo").disabled=on; $("#stopBtn").disabled=!on; }
 $("#stopBtn").onclick = ()=>{ if(CTRL) CTRL.abort(); };
@@ -796,6 +934,34 @@ boot();
     <div style="flex:1;position:relative;background:#0b1128">
       <iframe id="viewerFrame" title="پیش‌نمایش" style="width:100%;height:100%;border:0;background:#fff"></iframe>
       <pre id="viewerText" style="display:none;margin:0;width:100%;height:100%;overflow:auto;padding:14px;direction:ltr;text-align:left;font-size:13px;line-height:2;color:#c9d3ff;background:#0b1128"></pre>
+    </div>
+  </div>
+</div>
+<!-- ═══════════ تاریخچهٔ پرامپت‌ها ═══════════ -->
+<div class="modal" id="histModal">
+  <div class="sheet">
+    <div class="top">
+      <b>📜 تاریخچه</b><span class="hint" id="histMeta"></span><div class="grow"></div>
+      <button class="ghost" onclick="histReload()">↻</button>
+      <button class="del" style="background:#3a1620;border:1px solid #7a2f3f;color:#ffb4c2;border-radius:10px;padding:6px 11px"
+        onclick="histClearAll()">🗑 پاک کردن همه</button>
+      <button class="ghost" onclick="histClose()">✕</button>
+    </div>
+    <div class="cnt" id="histList"><span class="hint">…</span></div>
+  </div>
+</div>
+
+<!-- ═══════════ آپدیت برنامه ═══════════ -->
+<div class="modal" id="updModal">
+  <div class="sheet" style="max-width:560px">
+    <div class="top"><b>🔄 آپدیت برنامه</b><div class="grow"></div>
+      <button class="ghost" onclick="updClose()">✕</button></div>
+    <div class="cnt" id="updBody">
+      <div class="upd">با این دکمه، نسخهٔ تازه از گیت‌هاب گرفته و نصب می‌شود.
+        <b>.env و داده‌ها و فایل‌هایت دست نمی‌خورند.</b></div>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" id="updGo" onclick="doUpdate()">🔄 همین حالا آپدیت کن</button>
+      </div>
     </div>
   </div>
 </div>
