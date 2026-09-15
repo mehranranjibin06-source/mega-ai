@@ -92,6 +92,18 @@
   .ok{color:var(--ok)} .err{color:var(--err)} .warn{color:var(--warn)}
   .mic.rec{background:#fdecec;border-color:#e2434b;color:#e2434b}
   .hidden{display:none!important}
+  /* ═══ نمایش تمیز رسانه (عکس/کلیپ/صدا) ═══ */
+  .media{margin-top:10px;background:#0b1128;border:1px solid var(--line);border-radius:16px;
+        padding:8px;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .media img,.media video{width:100%;max-height:68vh;object-fit:contain;border-radius:12px;background:#070b18;display:block}
+  .media audio{width:100%}
+  .media .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;width:100%}
+  .media .acts a,.media .acts button{font-size:12.5px;padding:6px 12px;border-radius:10px}
+  .media .cap{font-size:12px;color:var(--dim)}
+  .fcard .mini{margin:0}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+  .gallery a{display:block;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#0b1128}
+  .gallery img{width:100%;height:82px;object-fit:cover;display:block}
 </style>
 </head>
 <body>
@@ -649,7 +661,22 @@ async function runAgent(){
         let ev; try{ev=JSON.parse(line.slice(6));}catch(e){continue;}
         if(ev.type==="tool"){ log.classList.remove("hidden"); log.textContent += `🔧 ${ev.name} ${JSON.stringify(ev.args||{}).slice(0,160)}\n`; log.scrollTop=1e6; }
         if(ev.type==="tool_result"){ log.textContent += `${String(ev.result||"").slice(0,400)}\n`; log.scrollTop=1e6; }
-        if(ev.type==="artifact"){ log.textContent += `📦 ${ev.name||ev.path} (${fmtSize(ev.size)}) — ${ev.url||""}\n`; log.scrollTop=1e6; loadFiles(); }
+        if(ev.type==="artifact"){
+          const nm = ev.name||ev.path||"", url = ev.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(ev.path||""));
+          const kd = kindOf(nm);
+          if(kd === "media"){                    // عکس/کلیپ → بالا و تمیز
+            const ext=(nm.split(".").pop()||"").toLowerCase();
+            const tag = /^(mp4|webm)$/.test(ext) ? `<video src="${url}" controls preload="metadata" playsinline></video>`
+              : (/^(mp3|wav|ogg|m4a)$/.test(ext) ? `<audio src="${url}" controls></audio>` : `<img src="${url}" loading="lazy">`);
+            body.insertAdjacentHTML("beforeend", `<div class="media">${tag}<div class="acts">
+              <a href="${dlUrl(url)}" download="${esc(nm)}"><button>⬇️ دانلود</button></a>
+              <a href="${url}" target="_blank" rel="noopener"><button class="ghost">↗ باز کردن</button></a></div>
+              <div class="cap">${esc(nm)} · ${fmtSize(ev.size||0)}</div></div>`);
+          } else {
+            log.textContent += `📦 ${nm} (${fmtSize(ev.size||0)})\n`; log.scrollTop=1e6;
+          }
+          loadFiles();
+        }
         if(ev.type==="final"){ acc = ev.text; body.innerHTML = mdLite(ev.text) +
           (ev.artifacts?.length? `<div style="margin-top:10px">${ev.artifacts.map(a=>`<div class="file">${fileIcon(a.path)}
             <a href="${dlUrl(a.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(a.path)))}" download>⬇️ ${esc(a.name||a.path)}</a>

@@ -159,6 +159,18 @@
   .spin{display:inline-block;width:13px;height:13px;border:2px solid #ffffff33;border-top-color:#fff;
         border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
   @keyframes sp{to{transform:rotate(360deg)}}
+  /* ═══ نمایش تمیز رسانه (عکس/کلیپ/صدا) ═══ */
+  .media{margin-top:10px;background:#0b1128;border:1px solid var(--line);border-radius:16px;
+        padding:8px;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .media img,.media video{width:100%;max-height:68vh;object-fit:contain;border-radius:12px;background:#070b18;display:block}
+  .media audio{width:100%}
+  .media .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;width:100%}
+  .media .acts a,.media .acts button{font-size:12.5px;padding:6px 12px;border-radius:10px}
+  .media .cap{font-size:12px;color:var(--dim)}
+  .fcard .mini{margin:0}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+  .gallery a{display:block;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#0b1128}
+  .gallery img{width:100%;height:82px;object-fit:cover;display:block}
 </style>
 </head>
 <body>
@@ -614,18 +626,28 @@ function addToolCard(container, name, args){
   return card;
 }
 function fileCard(path, name, size, url){
-  const uid = "fc" + Math.random().toString(36).slice(2, 8);
   const kind = kindOf(name);
-  const online = kind === "html" || kind === "text";
-  const label = kind === "html" ? "👁 نمایش در برنامه" : (kind === "text" ? "👁 خواندن در برنامه" : "👁 نمایش");
-  const btn = `<button onclick="openViewer('${url}','${esc(name)}','${kind}')">${label}</button>`;
+  const ext = (name.split(".").pop() || "").toLowerCase();
   const wrap = document.createElement("div");
-  wrap.innerHTML = `<div class="fcard">${fileIcon(path)} <b>${esc(name)}</b>
+  if(kind === "media"){                    // عکس/کلیپ/صدا → بالا و تمیز
+    const tag = /^(mp4|webm)$/.test(ext) ? `<video src="${url}" controls preload="metadata" playsinline></video>`
+      : (/^(mp3|wav|ogg|m4a)$/.test(ext) ? `<audio src="${url}" controls></audio>`
+      : `<img src="${url}" alt="${esc(name)}" loading="lazy">`);
+    wrap.innerHTML = `<div class="media">${tag}
+      <div class="acts">
+        <a href="${dlUrl(url)}" download="${esc(name)}"><button>⬇️ دانلود</button></a>
+        <a href="${url}" target="_blank" rel="noopener"><button class="ghost">↗ باز کردن</button></a>
+      </div>
+      <div class="cap">${fileIcon(name)} ${esc(name)} · ${fmtSize(size)}</div></div>`;
+  } else {
+    const label = kind === "html" ? "👁 نمایش در برنامه" : "👁 خواندن در برنامه";
+    wrap.innerHTML = `<div class="fcard">${fileIcon(path)} <b>${esc(name)}</b>
       <span class="hint">${fmtSize(size)}</span><div class="grow"></div>
-      <a href="${dlUrl(url)}" download="${esc(name)}"><button>⬇️ دانلود فایل</button></a>
-      ${btn}</div>
-    <div id="${uid}"></div>`;
+      <a href="${dlUrl(url)}" download="${esc(name)}"><button>⬇️ دانلود</button></a>
+      <button onclick="openViewer('${url}','${esc(name)}','${kind}')">${label}</button></div>`;
+  }
   $("#agentChat").appendChild(wrap);
+  wrap.scrollIntoView({behavior:"smooth", block:"end"});
   return wrap;
 }
 
@@ -644,17 +666,17 @@ function openViewer(url, name, kind){
   box.style.display = "block";
   $("#viewerName").textContent = name;
   $("#viewerKind").textContent = kind === "html" ? "صفحهٔ وب — داخل خود برنامه"
-    : (kind === "media" ? "فایل رسانه‌ای" : "متن/کد");
+    : (kind === "media" ? "پخش داخل برنامه" : "متن/کد");
   $("#viewerDl").href = dlUrl(url);
   $("#viewerDl").setAttribute("download", name);
   $("#viewerNew").href = url;
   if(kind === "media"){
     const ext = (name.split(".").pop() || "").toLowerCase();
     tx.style.display = "block"; fr.style.display = "none";
-    tx.innerHTML = /^(mp4|webm)$/.test(ext) ? `<video src="${url}" controls style="max-width:100%;border-radius:12px"></video>`
-      : (/^(mp3|wav|ogg|m4a)$/.test(ext) ? `<audio src="${url}" controls style="width:100%"></audio>`
-      : `<img src="${url}" style="max-width:100%;border-radius:12px">`);
-    $("#viewerKind").textContent = "پخش داخل برنامه";
+    tx.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100%">${
+      /^(mp4|webm)$/.test(ext) ? `<video src="${url}" controls playsinline style="max-width:100%;max-height:80vh;border-radius:12px"></video>`
+      : (/^(mp3|wav|ogg|m4a)$/.test(ext) ? `<audio src="${url}" controls style="width:90%"></audio>`
+      : `<img src="${url}" style="max-width:100%;max-height:80vh;border-radius:12px">`)}</div>`;
     return;
   }
   if(kind === "text"){
@@ -898,12 +920,18 @@ $("#vidRun").onclick = async ()=>{
   $("#vidResult").innerHTML=d.ok?mediaBox("video", d.url, "video.mp4"):"";
   $("#vidRun").disabled=false; loadStudioFiles();
 };
-function mediaBox(kind,url,name){
-  const id="mb"+Math.random().toString(36).slice(2,8);
-  return `<div class="row" style="margin-top:8px;gap:8px;align-items:center">
-    <a href="${url}" download="${name||"file"}"><button>⬇️ دانلود فایل</button></a>
-    <button class="ghost" onclick="togglePrev('${id}','${kind}','${url}')">👁 نمایش</button></div>
-  <div id="${id}" style="margin-top:8px"></div>`;
+function mediaBox(kind,url,name,extra){
+  /* نتیجه بلافاصله بالا می‌آید؛ دانلود دکمهٔ کوچک کنارش است */
+  const tag = kind==="video" ? `<video src="${url}" controls preload="metadata" playsinline></video>`
+    : kind==="audio" ? `<audio src="${url}" controls></audio>`
+    : `<img src="${url}" alt="${esc(name||"")}" loading="lazy">`;
+  return `<div class="media">${tag}
+    <div class="acts">
+      <a href="${dlUrl(url)}" download="${esc(name||"file")}"><button>⬇️ دانلود</button></a>
+      <a href="${url}" target="_blank" rel="noopener"><button class="ghost">↗ باز کردن</button></a>
+      ${extra||""}
+    </div>
+    ${name?`<div class="cap">${esc(name)}</div>`:""}</div>`;
 }
 function togglePrev(id,kind,url){
   const el=document.getElementById(id); if(!el) return;
@@ -915,10 +943,15 @@ function togglePrev(id,kind,url){
 }
 async function loadStudioFiles(){
   try{ const d=await (await fetch("/api/artifacts"+((SESSION)?`?session=${encodeURIComponent(SESSION)}`:""))).json();
-    const items=(d.items||[]).filter(f=>/\.(mp4|png|jpe?g|mp3|wav)$/i.test(f.name)).slice(0,40);
-    $("#studioFiles").innerHTML = items.length? items.map(f=>`<div class="file">${fileIcon(f.name)}
-      <span class="n"><a href="${f.url}" target="_blank">${esc(f.name)}</a></span><span class="s">${fmtSize(f.size)}</span></div>`).join("")
-      : `<span class="hint">هنوز چیزی ساخته نشده.</span>`; }catch(e){}
+    const items=(d.items||[]).filter(f=>/\.(mp4|png|jpe?g|webp|mp3|wav)$/i.test(f.name)).slice(0,40);
+    const pics = items.filter(f=>/\.(png|jpe?g|webp)$/i.test(f.name)).slice(0,8);
+    const rest = items.filter(f=>!pics.includes(f));
+    $("#studioFiles").innerHTML =
+      (pics.length? `<div class="gallery">${pics.map(f=>`<a href="${f.url}" target="_blank" rel="noopener" title="${esc(f.name)}"><img src="${f.url}" loading="lazy" alt="${esc(f.name)}"></a>`).join("")}</div>` : "") +
+      (rest.length? rest.map(f=>`<div class="file">${fileIcon(f.name)}
+      <span class="n"><a href="${dlUrl(f.url)}" download>⬇️ ${esc(f.name)}</a></span><span class="s">${fmtSize(f.size)}</span>
+      <button class="ghost" style="padding:2px 7px" onclick="openViewer('${f.url}','${esc(f.name)}','${kindOf(f.name)}')">👁</button></div>`).join("")
+      : (pics.length? "" : `<span class="hint">هنوز چیزی ساخته نشده.</span>`)); }catch(e){}
 }
 $("#refreshStudio").onclick=loadStudioFiles;
 

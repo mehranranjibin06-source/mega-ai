@@ -124,3 +124,22 @@ def test_files_route_serves_inline() -> None:
     assert "dl: int = 0" in block, "پارامتر dl نیست"
     assert "FileResponse(target, filename=target.name" in block, "حالت دانلود نیست"
     assert block.count("FileResponse") >= 2, "حالت inline/دانلود جدا نشده"
+
+
+def test_media_shows_inline() -> None:
+    """عکس/کلیپ باید بلافاصله «بالا» نشان داده شود، نه فقط دکمهٔ دانلود."""
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    js = _js(html)
+    assert '<video src="${url}"' in js or "<video src=\"${url}\"" in js, "ویدیو داخل صفحه ساخته نمی‌شود"
+    assert '<img src="${url}"' in js or "<img src=\"${url}\"" in js, "تصویر داخل صفحه ساخته نمی‌شود"
+    assert ".media img" in html and ".media video" in html, "استایل نمایش رسانه نیست"
+    assert "class=\"media\"" in js or "class=\"media\"" in html, "کادر media نیست"
+
+
+def test_file_card_shows_media_first() -> None:
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    js = _js(html)
+    block = js[js.index("function fileCard("):]
+    block = block[:block.index("function lastStepEl(")]
+    assert 'if(kind === "media")' in block, "کارت فایل رسانه‌ای مسیر نمایش بالا ندارد"
+    assert 'class="media"' in block, "کادر media در کارت فایل نیست"
