@@ -205,6 +205,7 @@
   <div class="grow"></div>
   <nav id="nav">
     <button data-tab="dashboard" class="on">🏠 داشبورد</button>
+    <button data-tab="brain">🧠 مغز</button>
     <button data-tab="agent">🤖 کارگزار</button>
     <button data-tab="council">🧠 پنل خبرگان</button>
     <button data-tab="studio">🎬 استودیو</button>
@@ -261,6 +262,7 @@
       <div class="tile" data-go="skills"><span class="ic">🧩</span><b>مهارت‌ها</b><span>نصب کتابخانه و اسکیل</span></div>
       <div class="tile" data-go="telegram"><span class="ic">📨</span><b>تلگرام</b><span>ربات بساز</span></div>
       <a class="tile" href="/terminal"><span class="ic">🖥</span><b>ترمینال</b><span>دستور بده، انجام شود</span></a>
+      <div class="tile" onclick="goTab('brain')"><span class="ic">🧠</span><b>مغز</b><span>۱۲۰ → ۱ تریلیون پارامتر</span></div>
       <a class="tile" href="/guide"><span class="ic">🔑</span><b>راهنمای هوش</b><span>رایگان، بدون کارت بانکی</span></a>
       <div class="tile" data-go="keys"><span class="ic">⚙️</span><b>کلیدها</b><span>وصل کردن هوش</span></div>
       <div class="tile" onclick="histOpen()"><span class="ic">📜</span><b>تاریخچه</b><span>پرامپت‌های قبلی · پاک کردن</span></div>
@@ -286,6 +288,65 @@
   </div>
 </section>
 
+
+
+<!-- ══════════════ مغز ══════════════ -->
+<section id="tab-brain" class="panel-hidden">
+  <div class="card">
+    <div class="row">
+      <h3 style="margin:0">🧠 مغزِ الانِ تو</h3><div class="grow"></div>
+      <button class="ghost" onclick="loadBrainTab()">↻ بررسی</button>
+    </div>
+    <div id="brainNow" class="hint" style="margin-top:10px">…</div>
+  </div>
+
+  <div class="cols" style="margin-top:14px">
+    <div class="card">
+      <h3>🟢 Groq — بزرگ‌ترین مدل‌های رایگان</h3>
+      <div class="hint" style="line-height:2">
+        <b>Kimi K2 = ۱ تریلیون پارامتر</b> · <b>Llama-4 Maverick = ۴۰۰ میلیارد</b> · GPT-OSS-120B<br>
+        رایگان، بدون کارت بانکی. فقط ایمیل لازم است. (از ایران باید VPN روشن باشد)
+      </div>
+      <div class="row" style="margin-top:10px">
+        <a href="https://console.groq.com/keys" target="_blank" rel="noopener"><button>🔑 گرفتن کلید رایگان</button></a>
+        <span class="hint">کلید با <code>gsk_</code> شروع می‌شود</span>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <input id="groqKey" type="password" placeholder="gsk_..." style="flex:1;min-width:200px">
+        <button class="primary" onclick="brainSave('groq')">ذخیره و تست</button>
+      </div>
+      <div class="hint" id="groqMsg" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h3>🔵 OpenRouter — مدل‌های ۲۰۰ تا ۷۰۰ میلیاردی رایگان</h3>
+      <div class="hint" style="line-height:2">
+        <b>DeepSeek R1 = ۶۷۱ میلیارد</b> · <b>Qwen3-235B</b> · Kimi K2<br>
+        رایگان (نسخه‌های <code>:free</code>)، بدون کارت بانکی.
+      </div>
+      <div class="row" style="margin-top:10px">
+        <a href="https://openrouter.ai/keys" target="_blank" rel="noopener"><button>🔑 گرفتن کلید رایگان</button></a>
+        <span class="hint">کلید با <code>sk-or-</code> شروع می‌شود</span>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <input id="orKey" type="password" placeholder="sk-or-..." style="flex:1;min-width:200px">
+        <button class="primary" onclick="brainSave('openrouter')">ذخیره و تست</button>
+      </div>
+      <div class="hint" id="orMsg" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>📊 راهنمای اندازهٔ مدل‌ها</h3>
+    <div class="hint" style="line-height:2.2">
+      • 🟢 <b>Cloudflare (وصل است)</b> → بزرگ‌ترینش <b>۱۲۰ میلیارد</b> — رایگان روزانه، بدون هیچ کارت.<br>
+      • 🟢 <b>Groq</b> → <b>۴۰۰ میلیارد</b> و <b>۱ تریلیون</b> — رایگان با ایمیل (VPN لازم است).<br>
+      • 🟢 <b>OpenRouter</b> → <b>۶۷۱ میلیارد</b> و <b>۲۳۵ میلیارد</b> — رایگان با ایمیل.<br>
+      • 🔒 اینترنت تو از ایران بسته است؛ اگر کلید نگیرد، در <a href="#" onclick="goTab('keys');return false">🔑 کلیدها</a>
+        آدرس پروکسی (مثل <code>http://127.0.0.1:10809</code>) را هم وارد کن.
+    </div>
+  </div>
+</section>
 
 <!-- ══════════════ تاریخچه ══════════════ -->
 <section id="tab-history" class="panel-hidden">
@@ -557,6 +618,16 @@ function stripTools(t){
   return (t||"").replace(/```(?:tool|tool_call)[\s\S]*?(?:```|$)/g, "").replace(/\n{3,}/g,"\n\n").replace(/^\s+/,"");
 }
 
+function asArr(x){
+  if(Array.isArray(x)) return x;
+  if(x === null || x === undefined || x === "") return [];
+  if(typeof x === "string"){
+    const t = x.trim();
+    if(t.startsWith("[")){ try{ const v = JSON.parse(t); if(Array.isArray(v)) return v; }catch(e){} }
+    return t.split(/[,\n]/).map(s=>String(s).trim()).filter(Boolean);
+  }
+  return [x];
+}
 function md(src){
   let t = esc(stripTools(src)); const blocks=[];
   t = t.replace(/```(\w*)\n?([\s\S]*?)```/g,(m,l,c)=>{blocks.push(`<pre><code>${c}</code></pre>`);return `\u0000${blocks.length-1}\u0000`;});
@@ -578,7 +649,7 @@ function fileIcon(name){
 /* ── تب‌ها */
 $$("#nav button").forEach(b=> b.onclick = ()=>{
   $$("#nav button").forEach(x=>x.classList.remove("on")); b.classList.add("on");
-  ["dashboard","agent","history","council","studio","voice","skills","telegram","keys"].forEach(t=>
+  ["dashboard","brain","agent","history","council","studio","voice","skills","telegram","keys"].forEach(t=>
     $("#tab-"+t).classList.toggle("panel-hidden", t!==b.dataset.tab));
   if (b.dataset.tab==="keys") loadHealth();
   if (b.dataset.tab==="skills") loadSkills();
@@ -672,7 +743,7 @@ function addToolCard(container, name, args){
   card.className = "toolc";
   const payload = JSON.stringify(args || {}, null, 1);
   if(name === "finish" && args && args.answer){
-    const files = (args.files || []).map(f=>`<span class="pill">📄 ${esc(f)}</span>`).join(" ");
+    const files = asArr(args.files).map(f=>`<span class="pill">📄 ${esc(f)}</span>`).join(" ");
     card.innerHTML = `<div class="th">✅ <b>جمع‌بندی و پایان کار</b><div class="grow"></div>${copyBtn(args.answer)}</div>
       <div style="padding:8px 11px;font-size:13.5px;line-height:2">${md(args.answer)}${files?`<div style="margin-top:6px">${files}</div>`:""}</div>`;
     container.appendChild(card); LAST_TOOL_CARD = card; return card;
@@ -927,6 +998,44 @@ async function doRestart(){
 document.addEventListener("keydown", e => { if(e.key === "Escape"){ histClose(); updClose(); } });
 window.addEventListener("load", function(){ try{ histReload(); }catch(e){} });
 
+
+/* ═══════════ تب مغز ═══════════ */
+async function loadBrainTab(){
+  const box = document.querySelector("#brainNow");
+  if(!box) return;
+  box.innerHTML = '<span class="spin"></span> در حال بررسی…';
+  try{
+    const h = await (await fetch("/api/health")).json();
+    const b = h.brain || {};
+    box.innerHTML = `<div style="font-size:17px;font-weight:800">${esc(b.display||"🧠 مغز فعال نیست")}</div>
+      <div style="margin-top:6px">سرویس فعال: <b>${esc((h.active||[]).join(" · ")||"—")}</b>
+        ${h.demo ? ' · <span class="warn">حالت نمایشی</span>' : ''}</div>
+      <div style="margin-top:6px">${b.params ? `اندازهٔ مغز فعال: <b>${esc(b.label)} پارامتر</b>` : ""}</div>`;
+  }catch(e){ box.innerHTML = `<span class="err">خطا: ${esc(e.message)}</span>`; }
+}
+async function brainSave(which){
+  const inp = which === "groq" ? document.querySelector("#groqKey") : document.querySelector("#orKey");
+  const msg = which === "groq" ? document.querySelector("#groqMsg") : document.querySelector("#orMsg");
+  const key = (inp?.value || "").trim();
+  if(!key){ msg.innerHTML = '<span class="err">اول کلید را بچسبان.</span>'; return; }
+  msg.innerHTML = '<span class="spin"></span> در حال ذخیره…';
+  try{
+    const r = await (await fetch("/api/keys",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({key})})).json();
+    const act = (r.active||[]);
+    msg.innerHTML = `✅ ذخیره شد — سرویس‌های فعال: <b>${esc(act.join(" · ")||"—")}</b><br>
+      <span class="spin"></span> در حال تست واقعی…`;
+    const t = await (await fetch("/api/test",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({provider: which})})).json();
+    msg.innerHTML = `✅ ذخیره شد · تست: ${t.ok ? `<b class="ok">موفق</b> ${esc(t.detail||"")}`
+        : `<b class="err">ناموفق</b> ${esc(t.error||t.detail||"")}`}
+      <br><span class="hint">اگر ناموفق بود: VPN را روشن کن یا در 🔑 کلیدها آدرس پروکسی بده.</span>`;
+    loadBrainTab(); loadHealth();
+    if(inp) inp.value = "";
+  }catch(e){ msg.innerHTML = `<span class="err">خطا: ${esc(e.message)}</span>`; }
+}
+window.addEventListener("load", function(){ try{ if(document.querySelector("#brainNow")) loadBrainTab(); }catch(e){} });
+
 function lastStepEl(stepEl){
   const ks = Object.keys(stepEl).map(Number).sort((a,b)=>a-b);
   return ks.length ? stepEl[ks[ks.length-1]] : null;
@@ -967,7 +1076,7 @@ function handleAgent(ev, stepEl, toolCount){
       aiMsg(`<div class="aihead">🧠 مدل اجراکننده: <b>${esc(ev.name)}</b> <span class="hint">(${esc(ev.provider)})</span></div>`);
       break;
     case "plan": {
-      const p = ev.plan || {}, st = p.steps || [];
+      const p = ev.plan || {}, st = asArr(p.steps);
       $("#agentPlan").innerHTML = `<div><b>هدف:</b> ${esc(p.goal||"")}</div>` +
         st.map(s=>`<div style="margin-top:6px"><span class="pill"><b>${esc(s.n||"•")}</b></span> ${esc(s.action||"")}</div>`).join("");
       const box = aiMsg();
@@ -1093,24 +1202,24 @@ function handleCouncil(ev){
       if(ev.text) el.querySelector("pre").innerHTML=md(ev.text); break; }
     case "tool": { const el=stageEl(ev.id,"expert","","",""); el.classList.add("open");
       el.querySelector(".body").insertAdjacentHTML("beforeend",`<div class="tool">🔧 ${esc(ev.name)} ${esc(JSON.stringify(ev.args||{}).slice(0,300))}</div>`); break; }
-    case "panel": $("#council").innerHTML=(ev.models||[]).map((m,i)=>`<div class="file"><b>${i+1}</b><span class="n">${esc(m.name)}</span><span class="s">${esc(m.provider)}</span></div>`).join("")||"—"; break;
+    case "panel": $("#council").innerHTML=asArr(ev.models).map((m,i)=>`<div class="file"><b>${i+1}</b><span class="n">${esc(m.name)}</span><span class="s">${esc(m.provider)}</span></div>`).join("")||"—"; break;
     case "final": {
       $("#final").innerHTML=md(ev.text);
       $("#finalMeta").innerHTML=`<div class="hint">⏱ ${ev.seconds}s · 🧠 ${(ev.panel||[]).length} خبره · ${esc(ev.tokens||0)} توکن</div>
-        <div>${(ev.panel||[]).map(p=>`<span class="pill"><b>${esc(p.name)}</b> ${p.seconds}s</span>`).join("")}</div>`; break; }
+        <div>${asArr(ev.panel).map(p=>`<span class="pill"><b>${esc(p.name)}</b> ${p.seconds}s</span>`).join("")}</div>`; break; }
     case "error": $("#final").innerHTML+=`<div class="err">${esc(ev.message)}</div>`; break;
   }
 }
 async function loadRank(){
   try{ const d=await (await fetch("/api/leaderboard")).json();
-    $("#rank").innerHTML=(d.rows||[]).slice(0,10).map(x=>`<div><span class="pill"><b>${x.avg}</b></span>
+    $("#rank").innerHTML=asArr(d.rows).slice(0,10).map(x=>`<div><span class="pill"><b>${x.avg}</b></span>
       ${esc((x.model||"").split("/").pop())} <span class="hint">(${esc(x.task_type)})</span></div>`).join("")||"هنوز داده‌ای نیست."; }catch(e){}
 }
 
 /* ═══════════ استودیو ═══════════ */
 async function loadOptions(){
   const d=await (await fetch("/api/media/options")).json(); OPTIONS=d;
-  const themeOpts=(d.themes||[]).map(t=>`<option>${esc(t)}</option>`).join("");
+  const themeOpts=asArr(d.themes).map(t=>`<option>${esc(t)}</option>`).join("");
   const voiceOpts=Object.entries(d.voices||{}).map(([k,v])=>`<option value="${v}">${esc(k)}</option>`).join("");
   ["#adTheme","#imgTheme"].forEach(s=>$(s).innerHTML=themeOpts);
   ["#adVoice","#vidVoice","#ttsVoice"].forEach(s=>$(s).innerHTML=voiceOpts);
@@ -1174,7 +1283,7 @@ function togglePrev(id,kind,url){
 }
 async function loadStudioFiles(){
   try{ const d=await (await fetch("/api/artifacts"+((SESSION)?`?session=${encodeURIComponent(SESSION)}`:""))).json();
-    const items=(d.items||[]).filter(f=>/\.(mp4|png|jpe?g|webp|mp3|wav)$/i.test(f.name)).slice(0,40);
+    const items=asArr(d.items).filter(f=>/\.(mp4|png|jpe?g|webp|mp3|wav)$/i.test(f.name)).slice(0,40);
     const pics = items.filter(f=>/\.(png|jpe?g|webp)$/i.test(f.name)).slice(0,8);
     const rest = items.filter(f=>!pics.includes(f));
     $("#studioFiles").innerHTML =
@@ -1208,7 +1317,7 @@ $("#sttRun").onclick = async ()=>{
 /* ═══════════ مهارت‌ها ═══════════ */
 async function loadSkills(){
   try{ const d=await (await fetch("/api/skills")).json();
-    $("#skillList").innerHTML=(d.skills||[]).map(s=>`<div class="file">${s.dir?"📁":"🐍"}
+    $("#skillList").innerHTML=asArr(d.skills).map(s=>`<div class="file">${s.dir?"📁":"🐍"}
       <span class="n">${esc(s.name)}</span><span class="s">${s.size?fmtSize(s.size):""}</span></div>`).join("")
       || `<span class="hint">خالی است.</span>`; }catch(e){}
 }

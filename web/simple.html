@@ -325,7 +325,7 @@ $("#ghReposBtn").onclick = async ()=>{
   const log = $("#ghLog"); log.classList.remove("hidden"); log.textContent = "⏳ …";
   try{
     const d = await (await fetch("/api/github/repos?limit=30")).json();
-    log.textContent = d.ok ? ((d.items||[]).map(r=>`${r.private? "🔒":"🌍"} ${r.full_name} —  ${r.url}`).join("\n") || "مخزنی نیست.")
+    log.textContent = d.ok ? ((asArr(d.items)).map(r=>`${r.private? "🔒":"🌍"} ${r.full_name} —  ${r.url}`).join("\n") || "مخزنی نیست.")
                            : "❌ "+(d.error||"");
   }catch(e){ log.textContent = "❌ "+e.message; }
 };
@@ -364,7 +364,7 @@ $("#ghPushProjectBtn").onclick = ()=> ghPush("project");
 async function loadPrompts(){
   try{
     const d = await (await fetch("/api/prompts")).json();
-    $("#promptList").innerHTML = (d.items||[]).map(p=>`
+    $("#promptList").innerHTML = (asArr(d.items)).map(p=>`
       <div class="file" style="align-items:flex-start">
         <span style="font-size:18px">🚀</span>
         <div style="flex:1;min-width:220px">
@@ -539,7 +539,7 @@ $("#diagBtn").onclick = async ()=>{
   $("#setProgress").classList.add("on"); $("#setResult").textContent="⏳ بررسی همه‌ی سرویس‌ها…";
   try{
     const d = await (await fetch("/api/diagnose")).json();
-    const rows = (d.results||[]).map(r=> r.ok
+    const rows = (asArr(d.results)).map(r=> r.ok
       ? `✅ ${r.provider_label||r.provider} — ${r.latency_ms}ms · ${r.models_count} مدل`
       : `❌ ${r.provider} — ${(r.error||"").slice(0,120)}${r.hint? " | "+r.hint:""}`);
     $("#setResult").innerHTML = `<b>${esc(d.advice)}</b>`;
@@ -557,6 +557,16 @@ function addBubble(who, text, cls=""){
 }
 function stripTools(t){
   return (t||"").replace(/```(?:tool|tool_call)[\s\S]*?(?:```|$)/g, "").replace(/\n{3,}/g,"\n\n").replace(/^\s+/,"");
+}
+function asArr(x){
+  if(Array.isArray(x)) return x;
+  if(x === null || x === undefined || x === "") return [];
+  if(typeof x === "string"){
+    const t = x.trim();
+    if(t.startsWith("[")){ try{ const v = JSON.parse(t); if(Array.isArray(v)) return v; }catch(e){} }
+    return t.split(/[,\n]/).map(s=>String(s).trim()).filter(Boolean);
+  }
+  return [x];
 }
 function mdLite(t){
   let s = esc(stripTools(t));
@@ -869,7 +879,7 @@ async function runAgent(){
           loadFiles();
         }
         if(ev.type==="final"){ acc = ev.text; body.innerHTML = mdLite(ev.text) +
-          (ev.artifacts?.length? `<div style="margin-top:10px">${ev.artifacts.map(a=>`<div class="file">${fileIcon(a.path)}
+          (asArr(ev.artifacts).length? `<div style="margin-top:10px">${asArr(ev.artifacts).map(a=>`<div class="file">${fileIcon(a.path)}
             <a href="${dlUrl(a.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(a.path)))}" download>⬇️ ${esc(a.name||a.path)}</a>
             <button class="mini" onclick="openViewer('${a.url || ("/files/"+encodeURI(SESSION)+"/"+encodeURI(a.path))}','${esc(a.name||a.path)}','${kindOf(a.name||a.path)}')">👁</button><span class="sz">${fmtSize(a.size)}</span></div>`).join("")}</div>` : "");
           loadFiles(); }
@@ -883,7 +893,7 @@ async function runAgent(){
 async function loadFiles(){
   try{
     const d = await (await fetch("/api/artifacts")).json();
-    const items=(d.items||[]).slice(0,30);
+    const items=(asArr(d.items)).slice(0,30);
     $("#files").innerHTML = items.length? items.map(f=>`<div class="file">${fileIcon(f.name)}
       <a href="${dlUrl(f.url)}" download>⬇️ ${esc(f.path)}</a>
         <button class="mini" onclick="openViewer('${f.url}','${esc(f.name)}','${kindOf(f.name)}')">👁</button><span class="sz">${fmtSize(f.size)}</span></div>`).join("")
@@ -919,7 +929,7 @@ $("#upInput").onchange = async ()=>{
 async function loadUploads(){
   try{
     const d = await (await fetch(`/api/uploads?session=${encodeURIComponent(SESSION||"")}`)).json();
-    const items = (d.items||[]).slice(0,20);
+    const items = (asArr(d.items)).slice(0,20);
     $("#uploads").innerHTML = items.length ? items.map(f=>`
       <div class="file">${fileIcon(f.name)}
         <a href="${f.url}" target="_blank">${esc(f.name)}</a>

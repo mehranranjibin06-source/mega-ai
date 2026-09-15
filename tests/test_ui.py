@@ -267,7 +267,7 @@ def test_history_tab_present() -> None:
     assert 'id="tab-history"' in html, "بخش تب تاریخچه نیست"
     assert 'id="histTabList"' in html and 'id="histQ"' in html, "لیست/جست‌وجوی تاریخچه نیست"
     assert "histTabRender" in js, "رندر تب تاریخچه نیست"
-    assert '"dashboard","agent","history"' in js.replace("'", '"'), "تب تاریخچه در فهرست تب‌ها نیست"
+    assert '"history"' in js.replace("'", '"') and "tab-history" in html, "تب تاریخچه در فهرست تب‌ها نیست"
 
 
 def test_dashboard_has_history_card() -> None:
@@ -294,3 +294,57 @@ def test_huge_models_registered() -> None:
     assert any("maverick" in m for m in groq), "Llama-4-Maverick (۴۰۰ میلیارد) در Groq نیست"
     assert any("deepseek-r1:free" in m for m in openrouter), "R1 (۶۷۱ میلیارد) در OpenRouter نیست"
     assert any("235b" in m for m in openrouter), "Qwen3-235B در OpenRouter نیست"
+
+
+def test_safe_arrays() -> None:
+    """هیچ‌جا نباید (چیزی || []).map باشد — مدل ممکن است رشته بفرستد و خطا بدهد."""
+    import re as _re
+    for page in ("index.html", "simple.html"):
+        html = (WEB / page).read_text(encoding="utf-8")
+        js = _js(html)
+        assert "function asArr(" in js, f"{page}: تابع امن asArr نیست"
+        bad = _re.findall(r"\((?:[A-Za-z_$][\w.$?]*\.)?[A-Za-z_$][\w.$?]*\s*\|\|\s*\[\]\)\s*\.map", js)
+        assert not bad, f"{page}: الگوی پرخطر {bad[:3]}"
+        assert "(args.files || []).map" not in js, "خطای args.files برگشته!"
+
+
+def test_asarr_behavior() -> None:
+    """asArr باید رشته، آرایه، null و JSON-رشته را امن مدیریت کند (باگ «map is not a function»)."""
+    import json as _json
+    import shutil
+    import subprocess
+    import tempfile
+    node = shutil.which("node")
+    if not node:
+        return
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    js = _js(html)
+    i = js.index("function asArr(")
+    fn = js[i:js.index("\n}\n", i) + 3]
+    probe = [
+        'const cases=[[],null,undefined,"","a.txt","a.txt, b.txt","[\\"x\\",\\"y\\"]",5,{a:1}];',
+        "console.log(JSON.stringify(cases.map(c=>asArr(c).length)));",
+        'console.log(JSON.stringify(asArr("a.txt, b.txt")));',
+        "console.log(JSON.stringify(asArr('[\"x\",\"y\"]')));",
+    ]
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as f:
+        f.write(fn + "\n" + "\n".join(probe) + "\n")
+        path = f.name
+    out = subprocess.run([node, path], capture_output=True, text=True).stdout.strip().splitlines()
+    Path(path).unlink(missing_ok=True)
+    assert out and _json.loads(out[0]) == [0, 0, 0, 0, 1, 2, 2, 1, 1], out
+    assert _json.loads(out[1]) == ["a.txt", "b.txt"], out
+    assert _json.loads(out[2]) == ["x", "y"], out
+
+
+
+
+def test_brain_tab() -> None:
+    """تب مغز: نمایش مغز فعال + کلید Groq/OpenRouter با تست واقعی."""
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    js = _js(html)
+    for need in ('id="tab-brain"', 'id="brainNow"', 'id="groqKey"', 'id="orKey"',
+                 'console.groq.com/keys', 'openrouter.ai/keys'):
+        assert need in html, f"تب مغز ناقص است: {need} نیست"
+    for fn in ("loadBrainTab", "brainSave"):
+        assert fn in js, f"تابع {fn} نیست"
