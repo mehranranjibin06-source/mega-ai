@@ -21,10 +21,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MIRRORS = [
-    "https://codeload.github.com/mehranranjibin06-source/mega-ai/zip/refs/heads/main",
-    "https://ghfast.top/https://github.com/mehranranjibin06-source/mega-ai/archive/refs/heads/main.zip",
+    "https://gh.llkk.cc/https://github.com/mehranranjibin06-source/mega-ai/archive/refs/heads/main.zip",
     "https://ghproxy.net/https://github.com/mehranranjibin06-source/mega-ai/archive/refs/heads/main.zip",
+    "https://ghfast.top/https://github.com/mehranranjibin06-source/mega-ai/archive/refs/heads/main.zip",
     "https://gh-proxy.com/https://github.com/mehranranjibin06-source/mega-ai/archive/refs/heads/main.zip",
+    "https://codeload.github.com/mehranranjibin06-source/mega-ai/zip/refs/heads/main",
+    "https://github.com/mehranranjibin06-source/mega-ai/archive/refs/heads/main.zip",
 ]
 KEEP_DIRS = {"data", "workspace", ".venv", "venv", ".git", "__pycache__", ".pytest_cache", "logs"}
 KEEP_FILES = {".env", "mega.db", ".env.local"}
