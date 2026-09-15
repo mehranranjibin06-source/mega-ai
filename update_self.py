@@ -259,28 +259,38 @@ def _listeners(ports=(8000, 8001)) -> list[int]:
 
 
 def restart() -> None:
-    for pid in _listeners():
-        say(f"⏹ بستن اجرای قبلی (PID {pid})")
-        subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
-    if _listeners():
+    """ری‌استارت امن: یک دستیار جدا (detached) سرور را می‌بندد و دوباره بالا می‌آورد.
+
+    جدا بودن دستیار مهم است، چون ممکن است این دستور از داخل خود برنامه (کارگزار)
+    اجرا شود؛ آن‌وقت سرور بسته می‌شود ولی دستیار مستقل ادامه می‌دهد.
+    """
+    pids = _listeners()
+    runner = "python start_vps.py" if os.name == "nt" else "python3 start_vps.py"
+    if os.name == "nt":
+        kills = "\r\n".join(f"taskkill /F /PID {p} >nul 2>&1" for p in pids)
+        bat = (
+            "@echo off\r\n"
+            "timeout /t 2 /nobreak >nul\r\n"
+            f"{kills}\r\n"
+            "timeout /t 3 /nobreak >nul\r\n"
+            f'cd /d "{ROOT}"\r\n'
+            f'start "" /min cmd /c "{runner} > update_restart.log 2>&1"\r\n'
+            'start "" "http://localhost:8000"\r\n'
+        )
+        helper = ROOT / "_restart_helper.bat"
+        helper.write_text(bat, encoding="ascii", newline="")
+        say(f"⏹ بستن اجرای قبلی ({len(pids)} فرایند) و روشن کردن دوباره…")
+        subprocess.Popen(["cmd", "/c", str(helper)], cwd=str(ROOT), close_fds=True,
+                         creationflags=0x00000008 | 0x00000200)   # DETACHED_PROCESS
+    else:
+        for pid in pids:
+            say(f"⏹ بستن اجرای قبلی (PID {pid})")
+            subprocess.run(["kill", "-TERM", str(pid)], capture_output=True)
         time.sleep(3)
-    say("🚀 بالا آوردن برنامه…")
-    runner = [sys.executable, "start_vps.py"] if os.name == "nt" else ["python3", "start_vps.py"]
-    try:
-        if os.name == "nt":
-            subprocess.Popen(runner, cwd=str(ROOT), close_fds=True,
-                             creationflags=0x00000008 | 0x00000200)
-        else:
-            subprocess.Popen(runner, cwd=str(ROOT), close_fds=True, start_new_session=True)
-    except Exception:  # noqa: BLE001
-        subprocess.Popen(["python", "start_vps.py"], cwd=str(ROOT), close_fds=True)
-    time.sleep(3)
-    if os.name == "nt":                     # مرورگر خود وی‌پی‌اس را باز کن
-        try:
-            subprocess.Popen(["cmd", "/c", "start", "", "http://localhost:8000"], cwd=str(ROOT))
-        except Exception:  # noqa: BLE001
-            pass
-    say("✅ برنامه دوباره روشن شد (۱۵ ثانیه صبر کن، بعد صفحه را باز کن)")
+        say("🚀 بالا آوردن برنامه…")
+        subprocess.Popen(["python3", "start_vps.py"], cwd=str(ROOT), close_fds=True,
+                         start_new_session=True)
+    say("✅ دستور ری‌استارت داده شد — ۲۰ ثانیه صبر کن، بعد صفحه را رفرش کن.")
 
 
 def main() -> int:
