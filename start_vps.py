@@ -16,6 +16,7 @@ start_vps.py — راه‌اندازی MehranAiShabestar روی سرور وین�
 from __future__ import annotations
 
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -224,7 +225,45 @@ def _can_import(py: str, mod: str) -> bool:
         return False
 
 
+def _auto_update_background() -> None:
+    """در پس‌زمینه نسخهٔ تازه را چک می‌کند (هرگز جلوی بالا آمدن برنامه را نمی‌گیرد)."""
+    if os.environ.get("MEGA_AUTO_UPDATE", "1") == "0":
+        return
+    try:
+        import threading
+
+        def work() -> None:
+            try:
+                import urllib.request
+                here = Path(__file__).resolve().parent
+                # خط نسخهٔ اصلی را از CDN سبک بخوان (سریع، حجم کم)
+                url = ("https://cdn.jsdelivr.net/gh/mehranranjibin06-source/mega-ai@main/mega/config.py")
+                try:
+                    raw = urllib.request.urlopen(
+                        urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"}), timeout=45).read()
+                except Exception:
+                    url = ("https://gh.llkk.cc/https://raw.githubusercontent.com/"
+                           "mehranranjibin06-source/mega-ai/main/mega/config.py")
+                    raw = urllib.request.urlopen(
+                        urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"}), timeout=60).read()
+                m = re.search(r"APP_VERSION\s*=\s*\"([^\"]+)\"", raw.decode("utf-8", "ignore"))
+                mine = re.search(r"APP_VERSION\s*=\s*\"([^\"]+)\"",
+                                 (here / "mega" / "config.py").read_text(encoding="utf-8"))
+                new, old = (m.group(1) if m else ""), (mine.group(1) if mine else "")
+                if new and old and new != old:
+                    say(f"🔄 نسخهٔ تازه موجود است: v{old} → v{new}", f"[i] update available: v{old} -> v{new}")
+                    say("   برای نصب: python update_self.py --restart",
+                        "   to install: python update_self.py --restart")
+            except Exception:
+                pass
+
+        threading.Thread(target=work, daemon=True).start()
+    except Exception:
+        pass
+
+
 def main() -> int:
+    _auto_update_background()
     _utf8_console()
     say("=" * 62, "=" * 62)
     say("   MehranAiShabestar — راه‌اندازی روی سرور خودت",
