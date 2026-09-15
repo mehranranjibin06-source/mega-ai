@@ -247,15 +247,45 @@ def _split_system(messages: list[dict]) -> tuple[str, list[dict]]:
     return "\n\n".join(sys_parts), rest
 
 
-def _extract(kind: str, data: dict, acc: list[str]) -> None:
+# مدل‌هایی که اول «فکر» می‌کنند و بعد جواب می‌دهند؛ اگر توکن کم بگیرند، جواب خالی می‌ماند.
+REASONING_HINTS = ("gpt-oss", "qwq", "deepseek-r1", "reasoning", "nemotron", "kimi-k2", "glm-5")
+MIN_TOKENS_REASONING = 900
+
+
+def is_reasoning(model: str) -> bool:
+    m = (model or "").lower()
+    return any(h in m for h in REASONING_HINTS)
+
+
+def fit_tokens(model: str, want: int) -> int:
+    """برای مدل‌های استدلالی، سقف توکن را بالا می‌برد تا جواب واقعی هم داشته باشد."""
+    try:
+        want = int(want)
+    except Exception:  # noqa: BLE001
+        want = 2048
+    return max(want, MIN_TOKENS_REASONING) if is_reasoning(model) else want
+
+
+def _extract(kind: str, data: dict, acc: list[str], rea: list[str] | None = None) -> None:
+    """متن پاسخ را در acc می‌ریزد.
+
+    برای مدل‌های استدلالی (مثل Nemotron / gpt-oss) توکن‌های «فکر کردن» در فیلد
+    reasoning می‌آیند؛ آن‌ها را جدا نگه می‌داریم تا وسط چت کاربر انگلیسی نبینَد
+    و فقط اگر پاسخ اصلی خالی بود، به‌عنوان متن نهایی استفاده شوند.
+    """
     try:
         if kind == "openai":
             ch = (data.get("choices") or [{}])[0]
-            txt = (ch.get("delta") or {}).get("content") or ""
-            if not txt and isinstance(ch.get("message"), dict):
-                txt = ch["message"].get("content") or ""
+            msg = ch.get("message") if isinstance(ch.get("message"), dict) else {}
+            delta = ch.get("delta") if isinstance(ch.get("delta"), dict) else {}
+            txt = delta.get("content") or ""
+            if not txt:
+                txt = (msg or {}).get("content") or ""
+            thought = delta.get("reasoning") or (msg or {}).get("reasoning") or ""
             if txt:
                 acc.append(txt)
+            elif thought and rea is not None:
+                rea.append(thought)
         elif kind == "anthropic":
             if data.get("type") == "content_block_delta":
                 t = (data.get("delta") or {}).get("text") or ""
@@ -315,14 +345,16 @@ async def _call_once(p, model: str, messages: list[dict], spec: ModelSpec, setti
         if p.kind == "openai":
             url = f"{base}/chat/completions"
             body: dict[str, Any] = {"model": model, "messages": messages,
-                                    "temperature": spec.temperature, "max_tokens": spec.max_tokens,
+                                    "temperature": spec.temperature,
+                                    "max_tokens": fit_tokens(model, spec.max_tokens),
                                     "stream": stream}
             if stream:
                 body["stream_options"] = {"include_usage": True}
             return await _sse_call(client, url, _headers(p), body, "openai", on_delta, stream)
         if p.kind == "anthropic":
             sys_prompt, rest = _split_system(messages)
-            body = {"model": model, "messages": rest, "max_tokens": spec.max_tokens,
+            body = {"model": model, "messages": rest,
+                    "max_tokens": fit_tokens(model, spec.max_tokens),
                     "temperature": min(spec.temperature, 1.0), "stream": stream}
             if sys_prompt:
                 body["system"] = sys_prompt
@@ -346,18 +378,20 @@ async def _call_once(p, model: str, messages: list[dict], spec: ModelSpec, setti
 
 async def _sse_call(client, url, headers, body, kind, on_delta, stream) -> tuple[str, int, bool]:
     acc: list[str] = []
+    rea: list[str] = []
     tokens = 0
     if not stream:
         r = await client.post(url, headers=headers, json=body)
         if r.status_code >= 400:
             raise ModelError(_err_text(r), r.status_code)
         data = r.json()
-        _extract(kind, data, acc)
+        _extract(kind, data, acc, rea)
         tokens = (data.get("usage") or {}).get("total_tokens") or 0
-        text = "".join(acc)
+        text = "".join(acc) or "".join(rea)
         if on_delta and text:
             on_delta(text)
         return text, tokens, False
+    _sent = [False]
     async with client.stream("POST", url, headers=headers, json=body) as r:
         if r.status_code >= 400:
             raw = (await r.aread()).decode("utf-8", "ignore")
@@ -373,13 +407,16 @@ async def _sse_call(client, url, headers, body, kind, on_delta, stream) -> tuple
             except json.JSONDecodeError:
                 continue
             before = len(acc)
-            _extract(kind, data, acc)
+            _extract(kind, data, acc, rea)
             if len(acc) > before and on_delta:
                 on_delta(acc[-1])
+                _sent[0] = True
             u = data.get("usage") or (data.get("usageMetadata") or {})
             if u:
                 tokens = u.get("total_tokens") or u.get("totalTokenCount") or tokens
-    return "".join(acc), tokens, False
+    if not acc and rea and on_delta and not _sent[0]:
+        on_delta("".join(rea))                      # پاسخ خالی بود → فکر مدل را نشان بده
+    return ("".join(acc) or "".join(rea)), tokens, False
 
 
 async def _chat_one(spec: ModelSpec, messages: list[dict], settings: Settings,

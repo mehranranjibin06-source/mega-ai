@@ -192,3 +192,43 @@ def test_restart_script_targets_only_self() -> None:
     assert "12345" in win and "taskkill /F /PID 12345" in win
     assert "python.exe" not in win.replace("python start_vps.py", ""), "نباید همهٔ پایتون‌ها را ببندد"
     assert "kill -TERM 12345" in posix
+
+
+def test_big_brain_default() -> None:
+    """مغز پیش‌فرض باید بزرگ‌ترین مدل در دسترس باشد (Nemotron-3-120B)."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from mega.config import PROVIDERS, ROLE_CANDIDATES
+    models = PROVIDERS["cloudflare"].default_models
+    assert models[0] == "@cf/nvidia/nemotron-3-120b-a12b", f"مدل اول = {models[0]}"
+    assert "@cf/openai/gpt-oss-120b" in models[:2], "پشتیبان ۱۲۰ میلیاردی نیست"
+    for role in ("agent", "expert", "balanced"):
+        cf = [prefs for pid, prefs in ROLE_CANDIDATES.get(role, []) if pid == "cloudflare"]
+        if cf:
+            assert cf[0][0] == "@cf/nvidia/nemotron-3-120b-a12b", f"نقش {role} → {cf[0][:1]}"
+
+
+def test_reasoning_models_handled() -> None:
+    """مدل‌های استدلالی: کف توکن + جدا نگه‌داشتن «فکر» از متن پاسخ."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from mega.providers import is_reasoning, fit_tokens, _extract
+    assert is_reasoning("@cf/openai/gpt-oss-120b")
+    assert is_reasoning("@cf/nvidia/nemotron-3-120b-a12b")
+    assert not is_reasoning("@cf/meta/llama-3.3-70b-instruct-fp8-fast")
+    assert fit_tokens("@cf/openai/gpt-oss-120b", 256) >= 900
+    assert fit_tokens("@cf/meta/llama-3.1-8b-instruct-fp8", 256) == 256
+
+    # فقط فکر (reasoning) → نباید داخل متن کاربر برود
+    acc, rea = [], []
+    data = {"choices": [{"delta": {"reasoning": "Let me think in English..."}}]}
+    _extract("openai", data, acc, rea)
+    assert not acc and rea, "فکر مدل به متن کاربر نشت کرد"
+    # پاسخ واقعی → متن
+    data2 = {"choices": [{"delta": {"content": "سلام"}}]}
+    _extract("openai", data2, acc, rea)
+    assert acc == ["سلام"]
+    # پاسخ غیراستریم خالی + reasoning → متن نهایی خالی نماند
+    acc2, rea2 = [], []
+    _extract("openai", {"choices": [{"message": {"reasoning": "فکر"}}]}, acc2, rea2)
+    assert (acc2 or rea2), "پاسخ خالی برگشت"
