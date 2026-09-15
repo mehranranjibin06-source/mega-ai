@@ -200,6 +200,7 @@
     <span>MEGA-AI</span><span class="badge">کارگزار مطلق</span>
   </div>
   <span id="statusBadge" class="badge demo">در حال بررسی…</span>
+  <span id="brainBadge" class="badge good" title="بزرگ‌ترین مغز فعال">🧠 —</span>
   <span id="verBadge" class="badge" title="نسخهٔ برنامه">v—</span>
   <div class="grow"></div>
   <nav id="nav">
@@ -214,7 +215,7 @@
     <a href="/tv" style="text-decoration:none"><button type="button">📺 تلویزیون</button></a>
     <a href="/more" style="text-decoration:none"><button type="button">✨ افزودنی‌ها</button></a>
     <a href="/terminal" style="text-decoration:none"><button type="button">🖥 ترمینال</button></a>
-    <button type="button" onclick="histOpen()" title="همهٔ پرامپت‌هایی که داده‌ای">📜 تاریخچه</button>
+    <button data-tab="history">📜 تاریخچه</button>
     <button type="button" id="updBtn" onclick="updOpen()" title="گرفتن نسخهٔ تازه از گیت‌هاب">🔄 آپدیت</button>
   </nav>
 </header>
@@ -267,6 +268,12 @@
     </div>
   </div>
 
+  <div class="card" style="margin-top:14px">
+    <h3>📜 آخرین پرامپت‌های من</h3>
+    <div id="dashHist"><span class="hint">…</span></div>
+    <div class="row" style="margin-top:8px"><button class="ghost" onclick="goTab('history')">دیدن همهٔ تاریخچه</button></div>
+  </div>
+
   <div class="cols" style="margin-top:14px">
     <div class="card">
       <h3>🕒 آخرین فایل‌های ساخته‌شده <span class="hint">(برای دیدن، اول دانلود)</span></h3>
@@ -276,6 +283,26 @@
       <h3>📊 وضعیت هوش</h3>
       <div id="dashBrain" class="hint">…</div>
     </div>
+  </div>
+</section>
+
+
+<!-- ══════════════ تاریخچه ══════════════ -->
+<section id="tab-history" class="panel-hidden">
+  <div class="card">
+    <div class="row">
+      <h3 style="margin:0">📜 تاریخچهٔ پرامپت‌های من</h3>
+      <span class="hint" id="histTabCount"></span>
+      <div class="grow"></div>
+      <input id="histQ" placeholder="جست‌وجو در پرامپت‌ها…" style="max-width:240px">
+      <button class="ghost" onclick="histTabRender()">🔍</button>
+      <button class="ghost" onclick="histReload()">↻ به‌روز</button>
+      <button class="ghost" onclick="histClearAll()" style="border-color:#7a2f3f;color:#ffb4c2">🗑 پاک کردن همه</button>
+    </div>
+    <div class="hint" style="margin-top:8px">هر پرامپتی که زده‌ای اینجاست · <b>↙ استفاده</b> = دوباره در کادر نوشتن · <b>🗑</b> = همان یکی پاک شود.</div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div id="histTabList"><span class="hint">⏳ در حال خواندن…</span></div>
   </div>
 </section>
 
@@ -551,7 +578,7 @@ function fileIcon(name){
 /* ── تب‌ها */
 $$("#nav button").forEach(b=> b.onclick = ()=>{
   $$("#nav button").forEach(x=>x.classList.remove("on")); b.classList.add("on");
-  ["dashboard","agent","council","studio","voice","skills","telegram","keys"].forEach(t=>
+  ["dashboard","agent","history","council","studio","voice","skills","telegram","keys"].forEach(t=>
     $("#tab-"+t).classList.toggle("panel-hidden", t!==b.dataset.tab));
   if (b.dataset.tab==="keys") loadHealth();
   if (b.dataset.tab==="skills") loadSkills();
@@ -564,6 +591,7 @@ async function loadHealth(){
     const d = await (await fetch("/api/health")).json();
     const b = $("#statusBadge");
     if(d.version) $("#verBadge").textContent = "v"+d.version;
+    if(d.brain && $("#brainBadge")){ $("#brainBadge").textContent = d.brain.display || "🧠"; $("#brainBadge").title = (d.brain.model||""); }
     if(d.demo && d.demo_model){ b.className="badge demo"; b.textContent="حالت نمایشی — کلید API بده تا مدل‌های واقعی وصل شوند"; }
     else if(d.demo){ b.className="badge demo"; b.textContent="کلیدی فعال نیست"; }
     else { b.className="badge good"; b.textContent=`فعال: ${d.active.join(" · ")}`; }
@@ -746,6 +774,7 @@ async function histReload(){
     const items = d.items || [], sess = d.sessions || [];
     HIST_CACHE = items;
     renderInlineHist(items);
+    try{ histTabRender(); }catch(e){}
     $("#histMeta").textContent = `${items.length} پرامپت · ${sess.length} نشست`;
     if(!items.length && !sess.length){ box.innerHTML = `<span class="hint">تاریخچه خالی است.</span>`; return; }
     box.innerHTML =
@@ -786,6 +815,17 @@ function histItemHTML(r, compact){
       <button class="del" onclick="histDelRun(${r.id})">🗑</button>
     </div>`;
 }
+function histTabRender(){
+  const box = document.querySelector("#histTabList");
+  if(!box) return;
+  const q = (document.querySelector("#histQ")?.value || "").trim();
+  const items = HIST_CACHE.filter(r => !q || (r.prompt || "").includes(q));
+  const c = document.querySelector("#histTabCount");
+  if(c) c.textContent = items.length ? `(${items.length} مورد)` : "";
+  box.innerHTML = items.length
+    ? items.map(r => histItemHTML(r)).join("")
+    : `<span class="hint">${q ? "چیزی با این جست‌وجو پیدا نشد." : "هنوز چیزی نپرسیده‌ای. هرچه بنویسی همین‌جا می‌ماند."}</span>`;
+}
 function histUse(id){
   const r = HIST_CACHE.find(x => x.id === id);
   if(!r) return;
@@ -819,6 +859,7 @@ async function histDelRun(id){
   const d = await histPost({action:"delete_run", id});
   toast(d.message||"پاک شد");
   histReload(); typeof loadDash === "function" && loadDash();
+  try{ histTabRender(); }catch(e){}
 }
 async function histDelSession(sid){
   if(!confirm("کل این نشست با همهٔ پرامپت‌هایش پاک شود؟")) return;
@@ -1259,6 +1300,16 @@ async function loadDash(){
       <a href="${f.url}" download title="دانلود">⬇️</a></div>`).join("") || `<span class="hint">هنوز فایلی ساخته نشده — یک کار شروع کن!</span>`;
   }catch(e){}
   try{ const a=await (await fetch("/api/addons")).json(); $("#dAddons").textContent=(a.addons||[]).length; }catch(e){}
+  try{
+    const h=await (await fetch("/api/history")).json(); const it=h.items||[];
+    HIST_CACHE = it; renderInlineHist(it); try{ histTabRender(); }catch(e){}
+    const dh=$("#dashHist");
+    if(dh) dh.innerHTML = it.length ? it.slice(0,5).map(r=>`<div class="hrow" style="margin-bottom:6px">
+        <span>💬</span><div class="txt"><div>${esc(r.prompt).slice(0,100)}</div><small>${when(r.created)}</small></div>
+        <button class="ghost" style="padding:5px 9px;border-radius:10px" onclick="histUse(${r.id})">↙ استفاده</button>
+        <button class="del" onclick="histDelRun(${r.id})">🗑</button></div>`).join("")
+      : `<span class="hint">هنوز پرامپتی نداده‌ای.</span>`;
+  }catch(e){}
 }
 
 /* راه‌اندازی */

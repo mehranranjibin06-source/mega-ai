@@ -250,11 +250,47 @@ def test_history_nav_button() -> None:
     """دکمهٔ تاریخچه باید در نوار بالا باشد تا پیدا شود."""
     html = (WEB / "index.html").read_text(encoding="utf-8")
     nav = html[html.index('<nav id="nav">'):html.index("</nav>")]
-    assert "histOpen()" in nav, "دکمهٔ تاریخچه در نوار بالا نیست"
+    assert "history" in nav, "تب تاریخچه در نوار بالا نیست"
     assert "updOpen()" in nav, "دکمهٔ آپدیت در نوار بالا نیست"
 
 
 def test_console_updater_exists() -> None:
     root = Path(__file__).resolve().parents[1]
     s = (root / "update_self.py").read_text(encoding="utf-8")
-    assert "updater.update" in s and "--restart" in s
+    assert "MIRRORS" in s and "--restart" in s and "taskkill" in s, "آپدیت‌کنندهٔ مستقل کامل نیست"
+
+
+def test_history_tab_present() -> None:
+    """تب تاریخچه: جست‌وجو + حذف + استفادهٔ دوباره."""
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    js = _js(html)
+    assert 'id="tab-history"' in html, "بخش تب تاریخچه نیست"
+    assert 'id="histTabList"' in html and 'id="histQ"' in html, "لیست/جست‌وجوی تاریخچه نیست"
+    assert "histTabRender" in js, "رندر تب تاریخچه نیست"
+    assert '"dashboard","agent","history"' in js.replace("'", '"'), "تب تاریخچه در فهرست تب‌ها نیست"
+
+
+def test_dashboard_has_history_card() -> None:
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    assert 'id="dashHist"' in html, "کارت تاریخچه در داشبورد نیست"
+
+
+def test_brain_badge() -> None:
+    for page in ("index.html", "simple.html"):
+        html = (WEB / page).read_text(encoding="utf-8")
+        assert 'id="brainBadge"' in html, f"{page}: نشان مغز نیست"
+    src = (Path(__file__).resolve().parents[1] / "server.py").read_text(encoding="utf-8")
+    assert "_brain_label" in src and '"brain": _brain_label()' in src
+
+
+def test_huge_models_registered() -> None:
+    """مدل‌های ۲۰۰ میلیاردی+ باید در فهرست باشند (Groq/OpenRouter)."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from mega.config import PROVIDERS
+    groq = PROVIDERS["groq"].default_models
+    openrouter = PROVIDERS["openrouter"].default_models
+    assert any("kimi-k2" in m for m in groq), "Kimi K2 (۱ تریلیون) در Groq نیست"
+    assert any("maverick" in m for m in groq), "Llama-4-Maverick (۴۰۰ میلیارد) در Groq نیست"
+    assert any("deepseek-r1:free" in m for m in openrouter), "R1 (۶۷۱ میلیارد) در OpenRouter نیست"
+    assert any("235b" in m for m in openrouter), "Qwen3-235B در OpenRouter نیست"

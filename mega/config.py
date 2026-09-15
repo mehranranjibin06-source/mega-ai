@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-APP_VERSION = "7.8"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
+APP_VERSION = "7.9"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
 
 ROOT = Path(__file__).resolve().parent.parent
 ENV_PATH = ROOT / ".env"
@@ -193,7 +193,8 @@ PROVIDERS: dict[str, Provider] = {
     ),
     "groq": Provider(
         "groq", "Groq (جهانی — با پروکسی)", "openai", "https://api.groq.com/openai/v1", "GROQ_API_KEY",
-        ["llama-3.3-70b-versatile", "moonshotai/kimi-k2-instruct", "llama-3.1-8b-instant"],
+        ["moonshotai/kimi-k2-instruct", "meta-llama/llama-4-maverick-17b-128e-instruct",
+         "openai/gpt-oss-120b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
         "https://console.groq.com/keys",
     ),
     "xai": Provider(
@@ -316,7 +317,8 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("gemini", ["gemini-2.5-pro", "gemini-2.5-flash"]),
         ("deepseek", ["deepseek-chat", "deepseek-reasoner"]),
         ("xai", ["grok-4", "grok-3"]),
-        ("groq", ["moonshotai/kimi-k2-instruct", "llama-3.3-70b-versatile"]),
+        ("groq", ["moonshotai/kimi-k2-instruct", "meta-llama/llama-4-maverick-17b-128e-instruct",
+                  "openai/gpt-oss-120b", "llama-3.3-70b-versatile"]),
     ],
     "expert2": [
         ("cloudflare", ["@cf/nvidia/nemotron-3-120b-a12b", "@cf/openai/gpt-oss-120b",
@@ -327,7 +329,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("winkapi", ["gpt-4o-mini", "gpt-5", "claude-sonnet-4-5"]),
         ("sinox", ["gpt-4o-mini", "gpt-5", "claude-sonnet-4-5"]),
         
-        ("openrouter", ["qwen/qwen3-235b-a22b", "meta-llama/llama-3.3-70b-instruct",
+        ("openrouter", ["deepseek/deepseek-r1:free", "moonshotai/kimi-k2:free", "qwen/qwen3-235b-a22b", "meta-llama/llama-3.3-70b-instruct",
                         "mistralai/mistral-large", "deepseek/deepseek-chat-v3.1"]),
         ("deepseek", ["deepseek-chat", "deepseek-reasoner"]),
         ("xai", ["grok-3", "grok-4"]),
@@ -468,15 +470,21 @@ CUSTOM_MODELS: list[str] = _csv("CUSTOM_MODELS")
 PROVIDERS["groq"] = Provider(
     "groq", "Groq — رایگان و بسیار سریع (بدون کارت)", "openai",
     "https://api.groq.com/openai/v1", "GROQ_API_KEY",
-    ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3-32b", "llama-3.3-70b-versatile"],
+    ["moonshotai/kimi-k2-instruct",                     # ۱ تریلیون پارامتر (MoE)
+     "meta-llama/llama-4-maverick-17b-128e-instruct",   # ۴۰۰ میلیارد (MoE)
+     "openai/gpt-oss-120b",
+     "llama-3.3-70b-versatile", "qwen/qwen3-32b", "openai/gpt-oss-20b"],
     "https://console.groq.com/keys",
 )
 
 PROVIDERS["openrouter"] = Provider(
     "openrouter", "OpenRouter — مدل‌های رایگان (بدون کارت)", "openai",
     "https://openrouter.ai/api/v1", "OPENROUTER_API_KEY",
-    ["openai/gpt-oss-120b:free", "openai/gpt-oss-20b:free", "qwen/qwen3-coder:free",
-     "google/gemma-3-27b-it:free", "deepseek/deepseek-r1:free"],
+    ["deepseek/deepseek-r1:free",                       # ۶۷۱ میلیارد (MoE)
+     "moonshotai/kimi-k2:free",                         # ۱ تریلیون (MoE)
+     "qwen/qwen3-235b-a22b:free",                       # ۲۳۵ میلیارد
+     "meta-llama/llama-4-maverick:free",                # ۴۰۰ میلیارد (MoE)
+     "openai/gpt-oss-120b:free", "openai/gpt-oss-20b:free"],
     "https://openrouter.ai/keys",
 )
 

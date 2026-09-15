@@ -125,6 +125,7 @@
 </head>
 <body>
 <header>
+  <span id="brainBadge" class="pill ok" title="بزرگ‌ترین مغز فعال">🧠 —</span>
   <div class="brand"><img src="/assets/logo_icon_256.png" alt="MehranAiShabestar" style="width:34px;height:34px;border-radius:9px;object-fit:cover;box-shadow:0 0 14px #22d3ee55;border:1px solid #26305a"> MehranAiShabestar <span class="pill" id="brandPill">هوش مصنوعی</span></div>
   <div class="grow"></div>
   <span class="pill" id="connPill">در حال بررسی…</span>
@@ -433,6 +434,8 @@ async function health(){
   if(d.demo && !d.demo_model){ b.className="pill bad"; b.textContent="کلیدی وصل نیست"; }
   else if(d.demo){ b.className="pill warn"; b.textContent="حالت نمایشی (کلید بده تا واقعی شود)"; }
   else { b.className="pill ok"; b.textContent=`وصل ✅ ${(d.active||[]).join(" · ")}`; }
+  const bb = $("#brainBadge");
+  if(bb && d.brain){ bb.textContent = d.brain.display || "🧠 —"; bb.title = d.brain.model || ""; }
   try{
     const g = await (await fetch("/api/gateways")).json();
     const s = g.settings||{};

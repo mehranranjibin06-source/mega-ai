@@ -216,6 +216,49 @@ async def asset_file(name: str):
     return FileResponse(target)
 
 
+
+
+# اندازهٔ تقریبی مدل‌های شناخته‌شده (میلیارد پارامتر) — برای نشان «مغز فعال»
+BRAIN_SIZE = {
+    "kimi-k2": (1000, "۱ تریلیون"), "deepseek-r1": (671, "۶۷۱ میلیارد"),
+    "qwen3-235b": (235, "۲۳۵ میلیارد"), "llama-4-maverick": (400, "۴۰۰ میلیارد"),
+    "llama-4-scout": (109, "۱۰۹ میلیارد"), "gpt-oss-120b": (120, "۱۲۰ میلیارد"),
+    "nemotron-3-120b": (120, "۱۲۰ میلیارد"), "nemotron": (120, "۱۲۰ میلیارد"),
+    "llama-3.3-70b": (70, "۷۰ میلیارد"), "qwen2.5-coder-32b": (32, "۳۲ میلیارد"),
+    "qwen3-32b": (32, "۳۲ میلیارد"), "gemma-4-26b": (26, "۲۶ میلیارد"),
+    "gemma-3-27b": (27, "۲۷ میلیارد"), "llama-3.1-8b": (8, "۸ میلیارد"),
+    "mistral-small": (24, "۲۴ میلیارد"), "deepseek-chat": (671, "۶۷۱ میلیارد"),
+}
+
+
+def _brain_label() -> dict:
+    """بزرگ‌ترین مغزی که الان فعال است + اندازه‌اش (۱۲۰ میلیارد / ۴۰۰ میلیارد / ۱ تریلیون)."""
+    try:
+        active = [p.id for p in real_configured_providers()]
+    except Exception:  # noqa: BLE001
+        active = []
+    best = {"provider": "", "model": "", "params": 0, "label": "—", "display": "🧠 مغز فعال نیست"}
+    for pid in active:
+        p = PROVIDERS.get(pid)
+        for m in (getattr(p, "default_models", None) or [])[:5]:
+            low = m.lower()
+            size, label = 0, ""
+            for key, (val, fa) in BRAIN_SIZE.items():
+                if key in low:
+                    size, label = val, fa
+                    break
+            if not size:                      # ناشناخته → از نام حدس بزن (حالت MoE مثل a22b را رد کن)
+                guess = re.sub(r"[-_]a\d+b", "", low).replace("-", "").replace("_", "")
+                n = re.search(r"(\d+\.?\d*)\s*([bt])(?![a-z0-9])", guess)
+                if n:
+                    size = float(n.group(1)) * (1000 if n.group(2) == "t" else 1)
+                    label = f"{int(size)} میلیارد"
+            if size > best["params"]:
+                best = {"provider": pid, "model": m, "params": size, "label": label,
+                        "display": f"🧠 {label} — {m.split('/')[-1]}"}
+    return best
+
+
 @app.get("/api/health")
 async def health():
     from mega import demo_model
@@ -223,6 +266,7 @@ async def health():
     return {
         "ok": True,
         "version": APP_VERSION,
+        "brain": _brain_label(),
         "demo": not has_real_keys(),
         "demo_model": demo_model.BRIDGE["active"],
         "providers": key_status(),
