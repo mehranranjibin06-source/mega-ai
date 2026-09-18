@@ -442,3 +442,12 @@ def test_fast_mode_picks_fast_model(monkeypatch=None) -> None:
     assert a and b
     assert P.speed_rank(b.model) <= P.speed_rank(a.model), (a.model, b.model)
     assert P.is_reasoning(a.model) or P.speed_rank(b.model) == 0, (a.model, b.model)
+
+
+def test_guide_has_groq_steps() -> None:
+    """راهنما باید گام‌به‌گام Groq و OpenRouter را داشته باشد (کاربر موبایلی)."""
+    g = (Path(__file__).resolve().parents[1] / "web" / "guide.html").read_text(encoding="utf-8")
+    for need in ("console.groq.com/keys", "gsk_", "openrouter.ai/keys", "sk-or-",
+                 "Create API Key", "۱۲۷.۰.۰.۱:۱۰۸۰۹" .replace("۱۲۷.۰.۰.۱:۱۰۸۰۹", "127.0.0.1:10809")):
+        assert need in g, f"راهنما ناقص است: {need}"
+    assert "۱ تریلیون" in g and "۶۷۱ میلیارد" in g
