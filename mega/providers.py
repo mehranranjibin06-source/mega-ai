@@ -230,8 +230,11 @@ async def resolve_role(role: str, temperature: float = 0.6, max_tokens: int = 20
                 prefs = CUSTOM_MODELS + prefs
             for model in await _pick_from_provider(pid, prefs, exclude, how_many=2, tier=s.model_tier):
                 picked.append((pid, model))
-    # مدل‌های هر پرووایدر بر اساس سطح قدرت مرتب شوند
-    picked.sort(key=lambda pm: _tier_rank(pm[1], s.model_tier))
+    # مرتب‌سازی: حالت عادی بر اساس قدرت، حالت ⚡ سریع بر اساس سرعت مدل
+    if getattr(s, "fast_mode", False):
+        picked.sort(key=lambda pm: speed_rank(pm[1]))
+    else:
+        picked.sort(key=lambda pm: _tier_rank(pm[1], s.model_tier))
     if not picked:
         return None
     pid, model = picked[min(offset, len(picked) - 1)]
@@ -250,6 +253,18 @@ def _split_system(messages: list[dict]) -> tuple[str, list[dict]]:
 # مدل‌هایی که اول «فکر» می‌کنند و بعد جواب می‌دهند؛ اگر توکن کم بگیرند، جواب خالی می‌ماند.
 REASONING_HINTS = ("gpt-oss", "qwq", "deepseek-r1", "reasoning", "nemotron", "kimi-k2", "glm-5")
 MIN_TOKENS_REASONING = 900
+
+
+FAST_HINTS = ("fast", "instant", "mini", "flash", "haiku", "turbo", "lite", "nano",
+              "8b", "7b", "3b", "1b", "small", "scout")
+
+
+def speed_rank(model: str) -> int:
+    """امتیاز سرعت مدل (کمتر = سریع‌تر). در حالت ⚡ سریع، سبک‌ها جلو می‌افتند."""
+    m = (model or "").lower()
+    if is_reasoning(m):
+        return 3                      # اول فکر می‌کند، بعد جواب می‌دهد → کندترین
+    return 0 if any(hint in m for hint in FAST_HINTS) else 1
 
 
 def is_reasoning(model: str) -> bool:

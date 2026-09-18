@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-APP_VERSION = "8.6"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
+APP_VERSION = "8.7"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
 
 ROOT = Path(__file__).resolve().parent.parent
 ENV_PATH = ROOT / ".env"
@@ -357,6 +357,7 @@ class Settings:
     memory: bool = True            # یادگیری از نتایج قبلی
     # ── عامل خودمختار
     agent_max_steps: int = 24      # سقف گام‌های اجرا (۰ = بی‌نهایت)
+    fast_mode: bool = False        # ⚡ حالت سریع (مدل سبک‌تر + گام کمتر)
     agent_auto_continue: bool = True
     # ── دستیار تلگرام
     telegram_allow_all: bool = True

@@ -348,3 +348,97 @@ def test_brain_tab() -> None:
         assert need in html, f"تب مغز ناقص است: {need} نیست"
     for fn in ("loadBrainTab", "brainSave"):
         assert fn in js, f"تابع {fn} نیست"
+
+
+def test_agent_null_guard() -> None:
+    """bug واقعی: کارت «پایان کار» کادر .res ندارد → قبلاً خطای null.textContent می‌داد."""
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    assert 'LAST_TOOL_CARD && LAST_TOOL_CARD.querySelector(".res")' in html, "نگهبان tool_result نیست"
+    assert 'if(LAST_TOOL_CARD){\n        const r = LAST_TOOL_CARD.querySelector(".res")' not in html, \
+        "نگهبان قدیمی برگشته"
+    assert "try{ handleAgent(ev, stepEl, toolCount); }catch" in html, "رویداد کارگزار محافظت نشده"
+    assert 'LAST_TOOL_CARD = null; return card;' in html, "کارت پایان کار باید از LAST_TOOL_CARD بیرون باشد"
+
+
+def test_viewer_back_forward_and_html_runs() -> None:
+    """پنجرهٔ پیش‌نمایش: دکمه‌های قبلی/بعدی + کش محتوا + اجرای واقعی HTML داخل برنامه."""
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    js = _js(html)
+    for i in ("vBack", "vFwd", "vIdx", "vRun"):
+        assert f'id="{i}"' in html, f"دکمهٔ {i} نیست"
+    for fn in ("vShow", "vNav", "vRender", "vRerun", "vSync", "vFind"):
+        assert f"function {fn}" in js or f"async function {fn}" in js, f"تابع {fn} نیست"
+    assert "srcdoc" in js, "HTML با srcdoc داخل برنامه اجرا نمی‌شود"
+    assert 'sandbox' in js and "allow-scripts" in js, "iframe اجازهٔ اجرای اسکریپت ندارد"
+    assert "VIEW_HIST" in js and "it.text = t" in js, "کش محتوا برای رفت/برگشت نیست"
+    assert "popstate" in js, "دکمهٔ برگشت گوشی وصل نشده"
+    assert "/api/find-file" in js, "جست‌وجوی فایل در پنجرهٔ پیش‌نمایش نیست"
+
+
+def test_files_root_fallback_and_guard() -> None:
+    """سرور: فایل‌های ریشهٔ برنامه هم سرو شوند، ولی .env/data هرگز."""
+    src = (Path(__file__).resolve().parents[1] / "server.py").read_text(encoding="utf-8")
+    assert "roots = [WORKSPACE.resolve(), Path(__file__).resolve().parent]" in src, "فایل ریشهٔ برنامه سرو نمی‌شود"
+    assert '"X-Frame-Options": "SAMEORIGIN"' in src, "iframe خودِ برنامه بلاک می‌شود"
+    assert '"@app.get("/api/find-file")' not in src and '/api/find-file' in src, "مسیر جست‌وجو نیست"
+    assert '".venv", "node_modules", ".arena", "logs"' in src, "نگهبان پوشه‌های خصوصی نیست"
+
+
+def test_quick_mode() -> None:
+    """حالت ⚡ سریع: مدل سبک‌تر + گام‌های کمتر، هم در سرور هم در رابط."""
+    root = Path(__file__).resolve().parents[1]
+    src = (root / "server.py").read_text(encoding="utf-8")
+    cfg = (root / "mega" / "config.py").read_text(encoding="utf-8")
+    html = (root / "web" / "index.html").read_text(encoding="utf-8")
+    assert '@app.post("/api/quick")' in src, "مسیر حالت سریع نیست"
+    assert "s.fast_mode = on" in src and 's.model_tier = "cheap"' in src
+    assert "fast_mode: bool = False" in cfg, "فیلد fast_mode در تنظیمات نیست"
+    for i in ("qFast", "qFull", "qMsg"):
+        assert f'id="{i}"' in html, f"دکمهٔ {i} در تب مغز نیست"
+    assert "setQuick" in html and "qSync" in html
+
+
+def test_speed_rank() -> None:
+    """حالت سریع: مدل سبک جلو می‌افتد، مدل‌های فکری عقب."""
+    import sys
+    from pathlib import Path as _P
+    sys.path.insert(0, str(_P(__file__).resolve().parents[1]))
+    from mega.providers import speed_rank
+    assert speed_rank("@cf/meta/llama-4-scout") == 0
+    assert speed_rank("llama-3.1-8b-instant") == 0
+    assert speed_rank("gemini-2.0-flash") == 0
+    assert speed_rank("@cf/nvidia/nemotron-3-120b-a12b") == 3      # فکری → کند
+    assert speed_rank("deepseek-r1") == 3
+    assert speed_rank("gpt-4.1") == 1
+    assert speed_rank("") == 1
+
+
+def test_fast_mode_picks_fast_model(monkeypatch=None) -> None:
+    """در حالت سریع، resolve_role واقعاً مدل سبک را انتخاب می‌کند (نه مدل فکری)."""
+    import asyncio, sys
+    from pathlib import Path as _P
+    sys.path.insert(0, str(_P(__file__).resolve().parents[1]))
+    from mega import providers as P
+    from mega.config import Settings
+
+    async def fake_pick(pid, prefs, exclude, how_many=3, tier="max"):
+        return list(prefs)[:how_many]
+
+    async def run():
+        orig_pick = P._pick_from_provider
+        P._pick_from_provider = fake_pick
+        try:
+            P.PROVIDERS["cloudflare"].key_override = "test-key"
+            slow = Settings(); slow.fast_mode = False
+            fast = Settings(); fast.fast_mode = True
+            a = await P.resolve_role("judge", settings=slow)
+            b = await P.resolve_role("judge", settings=fast)
+            return a, b
+        finally:
+            P._pick_from_provider = orig_pick
+            P.PROVIDERS["cloudflare"].key_override = None
+
+    a, b = asyncio.run(run())
+    assert a and b
+    assert P.speed_rank(b.model) <= P.speed_rank(a.model), (a.model, b.model)
+    assert P.is_reasoning(a.model) or P.speed_rank(b.model) == 0, (a.model, b.model)

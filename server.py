@@ -831,14 +831,78 @@ async def files(path: str, dl: int = 0):
     پیش‌فرض: داخل خود برنامه نمایش داده می‌شوند (HTML در iframe، عکس/ویدیو/صدا در پخش‌کننده).
     با dl=1 : به‌صورت دانلود فرستاده می‌شوند.
     """
-    root = WORKSPACE.resolve()
-    target = (root / path).resolve()
-    if not str(target).startswith(str(root)) or not target.is_file():
-        return JSONResponse({"ok": False, "error": "فایل پیدا نشد"}, status_code=404)
-    headers = {"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"}
+    rel = re.sub(r"^[/\\]+", "", str(path or ""))
+    roots = [WORKSPACE.resolve(), Path(__file__).resolve().parent]      # ساخته‌ها + خود برنامه
+    target = None
+    for root in roots:
+        cand = (root / rel).resolve()
+        if not str(cand).startswith(str(root)) or not cand.is_file():
+            continue
+        inner = str(cand.relative_to(root)).replace("\\", "/").lower()
+        if inner.split("/")[0] in (".env", "data", ".git", ".venv", "node_modules", ".arena", "logs"):
+            continue                                                     # رمزها و داده‌های خصوصی
+        target = cand
+        break
+    if target is None:
+        return JSONResponse({"ok": False, "error": "فایل پیدا نشد",
+                             "hint": "نام فایل را جست‌وجو کن"}, status_code=404)
+    headers = {"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store",
+               "X-Frame-Options": "SAMEORIGIN"}                          # اگرrame داخل خود برنامه
     if int(dl or 0):
         return FileResponse(target, filename=target.name, headers=headers)
+    if target.suffix.lower() in (".html", ".htm"):
+        return FileResponse(target, media_type="text/html; charset=utf-8", headers=headers)
     return FileResponse(target, headers=headers)      # inline → در برنامه باز می‌شود
+
+
+@app.get("/api/find-file")
+async def find_file(name: str = "", limit: int = 24):
+    """فایل را بر اساس نام پیدا می‌کند (وقتی آدرس اشتباه بوده یا نام کوتاه داده شده)."""
+    q = (name or "").strip().lower()
+    if not q:
+        return {"ok": True, "items": []}
+    stem = Path(q).stem
+    out = []
+    for root in (WORKSPACE, Path(__file__).resolve().parent):
+        if not root.is_dir():
+            continue
+        for p in sorted(root.rglob("*"), key=lambda x: -x.stat().st_mtime if x.is_file() else 0):
+            try:
+                if not p.is_file():
+                    continue
+                rel = p.relative_to(root).as_posix()
+            except (ValueError, OSError):
+                continue
+            if rel.split("/")[0] in (".env", "data", ".git", ".venv", "node_modules", ".arena", "logs"):
+                continue
+            low = p.name.lower()
+            if q == low or (stem and stem == p.stem.lower()) or (len(q) >= 3 and (q in low or low in q)):
+                out.append({"name": p.name, "path": rel, "size": p.stat().st_size,
+                            "url": f"/files/{rel}"})
+                if len(out) >= max(1, min(60, int(limit))):
+                    return {"ok": True, "items": out}
+    return {"ok": True, "items": out}
+
+
+@app.post("/api/quick")
+async def quick_mode(payload: dict):
+    """حالت ⚡ سریع: مدل سبک‌تر + گام‌های کمتر → جواب زودتر می‌رسد."""
+    s = STATE["settings"]
+    on = bool(payload.get("on", True))
+    s.fast_mode = on
+    if on:
+        s.model_tier = "cheap"
+        s.agent_max_steps = 8
+        s.max_tool_rounds = 1
+        s.panel_size = min(int(s.panel_size or 2), 2)
+    else:
+        s.model_tier = "max"
+        s.agent_max_steps = 24
+        s.max_tool_rounds = 3
+        s.panel_size = max(int(s.panel_size or 4), 4)
+    return {"ok": True, "fast_mode": s.fast_mode,
+            "settings": {k: getattr(s, k) for k in ("model_tier", "agent_max_steps",
+                                                    "max_tool_rounds", "panel_size", "fast_mode")}}
 
 
 @app.get("/api/artifacts")
