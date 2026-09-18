@@ -500,3 +500,19 @@ def test_brain_label_picks_550b_for_openrouter() -> None:
         assert "۵۵۰ میلیارد" in b["display"]
     finally:
         os.environ["OPENROUTER_API_KEY"] = ""
+
+
+def test_selftest_tab() -> None:
+    """تب «🧪 تست سیستم»: دکمه + مسیر /api/selftest + گروه‌های تست."""
+    root = Path(__file__).resolve().parents[1]
+    html = (root / "web" / "index.html").read_text(encoding="utf-8")
+    src = (root / "server.py").read_text(encoding="utf-8")
+    assert 'data-tab="test"' in html and 'id="tab-test"' in html, "تب تست نیست"
+    assert "stRun" in html and "stRender" in html, "توابع تب تست نیست"
+    assert '@app.get("/api/selftest")' in src, "مسیر /api/selftest نیست"
+    for sec in ("سرور و سیستم", "بخش‌های برنامه", "سرویس‌های هوش", "دسترسی شبکه"):
+        assert sec in src, f"گروه «{sec}» در تست نیست"
+    for host in ("api.avalai.ir", "api.gapgpt.app", "api.groq.com", "openrouter.ai",
+                 "open-meteo.com", "github.com"):
+        assert host in src, f"آزمون دسترسی به {host} نیست"
+    assert "proxy" in src and "🔀 پروکسی" in src, "آزمون پروکسی نیست"

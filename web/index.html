@@ -217,6 +217,7 @@
     <a href="/more" style="text-decoration:none"><button type="button">✨ افزودنی‌ها</button></a>
     <a href="/terminal" style="text-decoration:none"><button type="button">🖥 ترمینال</button></a>
     <button data-tab="history">📜 تاریخچه</button>
+    <button data-tab="test">🧪 تست</button>
     <button type="button" id="updBtn" onclick="updOpen()" title="گرفتن نسخهٔ تازه از گیت‌هاب">🔄 آپدیت</button>
   </nav>
 </header>
@@ -358,6 +359,22 @@
       • 🔒 اینترنت تو از ایران بسته است؛ اگر کلید نگیرد، در <a href="#" onclick="goTab('keys');return false">🔑 کلیدها</a>
         آدرس پروکسی (مثل <code>http://127.0.0.1:10809</code>) را هم وارد کن.
     </div>
+  </div>
+</section>
+
+<!-- ══════════════ تست سیستم ══════════════ -->
+<section id="tab-test" class="panel-hidden">
+  <div class="card">
+    <h3>🧪 تست کامل — «همه بخش‌ها خوب کار می‌کنند؟»</h3>
+    <div class="hint" style="line-height:2">
+      این تست <b>روی همین سرور تو</b> اجرا می‌شود (نه از اینترنت بیرون)، پس هرچه نشان می‌دهد دقیقاً وضعیت
+      خودت است: کدام سرویس هوش کلیدش سالم است، کدام سایت‌ها از شبکهٔ تو باز می‌شوند، و کدام بخش برنامه کار می‌کند.
+    </div>
+    <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
+      <button id="stRun" class="primary" onclick="stRun()">▶️ تست را بزن</button>
+      <span class="hint" id="stMsg">آماده</span>
+    </div>
+    <div id="stOut" style="margin-top:12px"></div>
   </div>
 </section>
 
@@ -662,9 +679,10 @@ function fileIcon(name){
 /* ── تب‌ها */
 $$("#nav button").forEach(b=> b.onclick = ()=>{
   $$("#nav button").forEach(x=>x.classList.remove("on")); b.classList.add("on");
-  ["dashboard","brain","agent","history","council","studio","voice","skills","telegram","keys"].forEach(t=>
+  ["dashboard","brain","agent","history","test","council","studio","voice","skills","telegram","keys"].forEach(t=>
     $("#tab-"+t).classList.toggle("panel-hidden", t!==b.dataset.tab));
   if (b.dataset.tab==="keys") loadHealth();
+  if (b.dataset.tab==="test") stPaint();
   if (b.dataset.tab==="skills") loadSkills();
   if (b.dataset.tab==="telegram") tgStatus();
 });
@@ -926,6 +944,53 @@ window.addEventListener("popstate", () => {          // دکمهٔ برگشت گ
   }
 });
 
+
+
+/* ═══════════ 🧪 تست کامل سیستم ═══════════ */
+let ST_LAST = null;
+function stPaint(){
+  const box = document.getElementById("stOut");
+  if(box && !ST_LAST) box.innerHTML = '<div class="hint">هنوز تستی نگرفته‌ای — دکمهٔ «تست را بزن» را فشار بده.</div>';
+}
+async function stRun(){
+  const out = document.getElementById("stOut"), msg = document.getElementById("stMsg");
+  const btn = document.getElementById("stRun");
+  if(btn) btn.disabled = true;
+  if(msg) msg.innerHTML = '<span class="spin"></span> در حال تست همه بخش‌ها… (تا ۲۰ ثانیه)';
+  if(out) out.innerHTML = '<div class="hint">…</div>';
+  try{
+    const d = await (await fetch("/api/selftest")).json();
+    ST_LAST = d;
+    stRender(d);
+    if(msg) msg.innerHTML = `<b class="${(d.summary&&d.summary.fail)?'err':'ok'}">${esc(d.verdict||"")}</b> · ${esc(d.checked_at||"")}`;
+  }catch(e){
+    if(out) out.innerHTML = `<div class="err">تست انجام نشد: ${esc(e.message)}</div>`;
+    if(msg) msg.textContent = "خطا";
+  }
+  if(btn) btn.disabled = false;
+}
+function stRender(d){
+  const out = document.getElementById("stOut"); if(!out) return;
+  const s = d.summary || {};
+  let h = `<div class="row" style="gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <span class="pill" style="background:#064e3b55">✅ ${s.ok||0} سالم</span>
+      <span class="pill" style="background:#7f1d1d55">❌ ${s.fail||0} مشکل</span>
+      <span class="pill">⚪ ${s.skip||0} بی‌کلید/تنظیم‌نشده</span>
+      <span class="pill">v${esc(d.version||"")}</span></div>`;
+  for(const sec of asArr(d.sections)){
+    h += `<div class="card" style="margin-top:10px"><b>${esc(sec.title||"")}</b>
+      <div style="margin-top:8px">`;
+    for(const it of asArr(sec.items)){
+      const mark = it.ok === true ? "✅" : (it.ok === false ? "❌" : "⚪");
+      h += `<div style="padding:5px 0;border-bottom:1px dashed #ffffff14">
+          <span>${mark}</span> <b>${esc(it.name||"")}</b>
+          <span class="hint"> — ${esc(it.detail||"")}</span>
+          ${it.hint? `<div class="hint" style="color:#fbbf24">↳ ${esc(it.hint)}</div>`:""}</div>`;
+    }
+    h += `</div></div>`;
+  }
+  out.innerHTML = h;
+}
 
 /* ═══════════ تاریخچه و پاک‌سازی ═══════════ */
 let HIST_CACHE = [];

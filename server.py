@@ -424,6 +424,206 @@ async def set_settings(payload: dict):
     return {"ok": True, "settings": {k: getattr(s, k) for k in s.__dataclass_fields__}}
 
 
+# ════════════════════════════════════════ 🧪 تست کامل سیستم
+def _probe_hosts() -> list[tuple[str, str]]:
+    """سایت‌هایی که باید از سرور کاربر باز شوند: (آدرس، برچسب)."""
+    return [
+        # ── سرویس‌های ایرانی (باید بدون فیلترشکن باز شوند)
+        ("https://api.avalai.ir/v1/models", "AvalAI (ایرانی)"),
+        ("https://api.gapgpt.app/v1/models", "GapGPT (ایرانی)"),
+        ("https://api.metisai.ir/openai/v1/models", "MetisAI (ایرانی)"),
+        ("https://api.winkapi.net/v1/models", "WinkAPI (ایرانی)"),
+        ("https://sinoxapi.com/v1/models", "SinoxAPI (قوی‌ترین مدل‌های رایگان ایرانی)"),
+        # ── جهانی (از ایران فیلترند → پروکسی لازم است)
+        ("https://api.groq.com/openai/v1/models", "Groq (جهانی — سریع)"),
+        ("https://openrouter.ai/api/v1/models", "OpenRouter (جهانی — ۵۵۰ میلیارد رایگان)"),
+        ("https://api.cloudflare.com/client/v4/", "Cloudflare (وصل تو)"),
+        ("https://api.openai.com/v1/models", "OpenAI"),
+        ("https://generativelanguage.googleapis.com/v1beta/models", "Google Gemini"),
+        ("https://api.telegram.org", "تلگرام"),
+        # ── ابزارهای رایگان برنامه
+        ("https://api.open-meteo.com/v1/forecast?latitude=35&longitude=51", "هواشناسی (بی‌کلید)"),
+        ("https://de1.api.radio-browser.info/json/stations/topvote/2", "رادیو اینترنتی"),
+        ("https://iptv-org.github.io/api/streams.json", "فهرست تلویزیون"),
+        ("https://api.mymemory.translated.net/get?q=hi&langpair=en|fa", "مترجم (بی‌کلید)"),
+        ("https://github.com", "GitHub (برای آپدیت)"),
+        ("https://cdn.jsdelivr.net", "jsDelivr (برای آپدیت)"),
+    ]
+
+
+async def _selftest_host(client, url: str, label: str, proxy_note: str = "") -> dict:
+    import time as _t
+    t0 = _t.time()
+    try:
+        r = await client.get(url, timeout=8)
+        ms = int((_t.time() - t0) * 1000)
+        return {"name": label, "ok": True, "code": r.status_code, "ms": ms,
+                "detail": f"باز است ({r.status_code}) در {ms} میلی‌ثانیه"}
+    except Exception as e:  # noqa: BLE001
+        ms = int((_t.time() - t0) * 1000)
+        kind = type(e).__name__
+        if "Timeout" in kind or "Connect" in kind or "Proxy" in kind:
+            return {"name": label, "ok": False, "ms": ms,
+                    "detail": "بسته است (پاسخ نداد)", "hint": proxy_note or "این سایت از شبکهٔ سرورت باز نمی‌شود"}
+        return {"name": label, "ok": False, "ms": ms, "detail": f"{kind}", "hint": proxy_note or ""}
+
+
+@app.get("/api/selftest")
+async def selftest(deep: int = 0):
+    """تست کامل همه بخش‌ها روی همین سرور (برای کاربر ایرانی که دسترسی از بیرون ندارد)."""
+    import platform, shutil, time as _t
+    import httpx
+    from mega import skills as _skills
+
+    st = STATE["settings"]
+    out: dict = {"ok": True, "version": APP_VERSION, "sections": []}
+
+    # ── ۱) سرور
+    sys_items = [
+        {"name": "نسخهٔ پایتون", "ok": True, "detail": platform.python_version()},
+        {"name": "سیستم‌عامل", "ok": True, "detail": f"{platform.system()} {platform.release()}"},
+    ]
+    try:
+        du = shutil.disk_usage(str(ROOT))
+        free_gb = du.free / 1e9
+        sys_items.append({"name": "فضای دیسک", "ok": free_gb > 1,
+                          "detail": f"{free_gb:.1f} گیگابایت آزاد",
+                          "hint": "" if free_gb > 1 else "دیسک پر است — فایل‌های workspace را پاک کن"})
+    except Exception:  # noqa: BLE001
+        pass
+    ff = shutil.which("ffmpeg")
+    sys_items.append({"name": "ffmpeg (ساخت ویدیو/صدا)", "ok": bool(ff),
+                      "detail": "نصب است" if ff else "نصب نیست",
+                      "hint": "" if ff else "برای استودیو/صدا: winget install ffmpeg یا از ffmpeg.org دانلود کن"})
+    nd = shutil.which("node")
+    sys_items.append({"name": "Node.js", "ok": bool(nd), "detail": "نصب است" if nd else "نصب نیست",
+                      "hint": "" if nd else "برای بعضی ابزارها لازم است (اختیاری)"})
+    try:
+        probe = WORKSPACE / "_selftest.tmp"
+        probe.write_text("ok", encoding="utf-8")
+        probe.unlink()
+        sys_items.append({"name": "نوشتن در پوشهٔ کار", "ok": True, "detail": "اجازه دارد"})
+    except Exception as e:  # noqa: BLE001
+        sys_items.append({"name": "نوشتن در پوشهٔ کار", "ok": False, "detail": str(e)[:80]})
+    try:
+        stats = MEMORY.stats()
+        hist = MEMORY.prompts("", 1000)
+        sys_items.append({"name": "پایگاه تاریخچه", "ok": stats.get("runs", 0) >= 0,
+                          "detail": f"{stats.get('runs', 0)} اجرا · {len(hist)} پرامپت ذخیره‌شده · "
+                                    f"امتیاز {stats.get('models', 0)} مدل"})
+    except Exception as e:  # noqa: BLE001
+        sys_items.append({"name": "پایگاه تاریخچه", "ok": False, "detail": str(e)[:80]})
+    sys_items.append({"name": "رمز ورود", "ok": bool(os.environ.get("MEGA_PASSWORD") or ALWAYS_OK_PASSWORD),
+                      "detail": "فعال است" if os.environ.get("MEGA_PASSWORD") else "فقط رمز پیش‌فرض"})
+    out["sections"].append({"title": "🖥 سرور و سیستم", "items": sys_items})
+
+    # ── ۲) ابزارهای داخلی
+    tool_items = []
+    try:
+        names = sorted(n for n in dir(_skills.SkillBox) if n.startswith("_t_"))
+        tool_items.append({"name": "جعبه‌ابزار کارگزار", "ok": len(names) >= 10,
+                           "detail": f"{len(names)} ابزار فعال (کد، فایل، وب، ویدیو، صدا…)"})
+    except Exception as e:  # noqa: BLE001
+        tool_items.append({"name": "جعبه‌ابزار کارگزار", "ok": False, "detail": str(e)[:80]})
+    for label, path in (("رابط اصلی (تب‌ها)", WEB_DIR / "index.html"),
+                        ("رابط ساده", WEB_DIR / "simple.html"),
+                        ("ترمینال", WEB_DIR / "terminal.html"),
+                        ("تلویزیون", WEB_DIR / "tv.html"),
+                        ("افزودنی‌ها", WEB_DIR / "more.html"),
+                        ("راهنمای کلید", WEB_DIR / "guide.html")):
+        tool_items.append({"name": label, "ok": path.exists(),
+                           "detail": "هست" if path.exists() else "فایل نیست"})
+    try:
+        arts = list(WORKSPACE.rglob("*"))
+        tool_items.append({"name": "پوشهٔ فایل‌های ساخته‌شده", "ok": True,
+                           "detail": f"{len([a for a in arts if a.is_file()])} فایل"})
+    except Exception:  # noqa: BLE001
+        pass
+    out["sections"].append({"title": "🧩 بخش‌های برنامه", "items": tool_items})
+
+    # ── ۳) سرویس‌های هوش (هر کدام کلید دارد واقعاً تست می‌شود)
+    prov_items = []
+    configured = []
+    for pid, p in PROVIDERS.items():
+        if pid == "custom":
+            continue
+        if not p.key:
+            prov_items.append({"name": f"{p.label} — {pid}", "ok": None,
+                               "detail": "کلید نداری (خالی)"})
+            continue
+        configured.append((pid, p))
+    if configured:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            async def one(pid: str, p) -> dict:
+                base = p.api_base
+                try:
+                    if p.kind == "gemini":
+                        r = await client.get(f"{base}/models", params={"key": p.key}, timeout=12)
+                    else:
+                        r = await client.get(f"{base.rstrip('/')}/models",
+                                             headers={"Authorization": f"Bearer {p.key}"}, timeout=12)
+                    if r.status_code == 200:
+                        data = r.json()
+                        n = len(data.get("data") or data.get("models") or [])
+                        return {"name": f"{p.label} — {pid}", "ok": True,
+                                "detail": f"✅ کلید سالم · {n} مدل در دسترس"}
+                    if r.status_code in (401, 403):
+                        return {"name": f"{p.label} — {pid}", "ok": False,
+                                "detail": f"❌ کلید رد شد ({r.status_code})",
+                                "hint": "کلید را دوباره از پنل بگیر و در تب 🔑 کلیدها بچسبان"}
+                    return {"name": f"{p.label} — {pid}", "ok": r.status_code < 500,
+                            "detail": f"پاسخ {r.status_code}"}
+                except Exception as e:  # noqa: BLE001
+                    kind = type(e).__name__
+                    blocked = "Timeout" in kind or "Connect" in kind or "Proxy" in kind
+                    return {"name": f"{p.label} — {pid}", "ok": False,
+                            "detail": "❌ دسترس نیست (شبکه)", "hint":
+                            "سایتش از سرورت بسته است — پروکسی بگذار (تب 🔑 کلیدها)" if blocked else kind}
+            prov_items.extend(await asyncio.gather(*[one(pid, p) for pid, p in configured]))
+    out["sections"].append({"title": "🔌 سرویس‌های هوش (کلیددار)", "items": prov_items})
+
+    # ── ۴) شبکه: از سرور تو چه چیزی باز می‌شود (ایرانی و جهانی) + پروکسی
+    host_items = []
+    proxy = (getattr(st, "proxy", "") or "").strip()
+    note_ir = "سرویس ایرانی است؛ اگر بسته است یعنی شبکهٔ سرورت مشکل دارد (یا خود سرویس خوابیده)"
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        probes = _probe_hosts()
+
+        async def probe(url: str, label: str) -> dict:
+            iranian = any(k in url for k in ("avalai", "gapgpt", "metisai", "winkapi", "sinoxapi"))
+            return await _selftest_host(client, url, ("🇮🇷 " if iranian else "🌍 ") + label,
+                                        proxy_note=note_ir if iranian else
+                                        "از ایران بسته است — VPN/پروکسی لازم است (تب 🔑 کلیدها)")
+
+        r1 = await asyncio.gather(*[probe(u, l) for u, l in probes])
+        host_items.extend(r1)
+        if proxy:
+            try:
+                async with httpx.AsyncClient(proxy=proxy, timeout=10, follow_redirects=True) as pc:
+                    r = await pc.get("https://api.groq.com/openai/v1/models")
+                    host_items.append({"name": "🔀 پروکسی تو", "ok": r.status_code < 500,
+                                       "detail": f"کار می‌کند (پاسخ {r.status_code}) — سرویس‌های جهانی از این مسیر باز می‌شوند"})
+            except Exception as e:  # noqa: BLE001
+                host_items.append({"name": "🔀 پروکسی تو", "ok": False,
+                                   "detail": f"کار نکرد: {type(e).__name__}",
+                                   "hint": "آدرس پروکسی/پورت را چک کن — مثلاً http://127.0.0.1:10809"})
+        else:
+            host_items.append({"name": "🔀 پروکسی", "ok": None,
+                               "detail": "تنظیم نشده (اگر سایت جهانی بسته است، بگذار)",
+                               "hint": "تب 🔑 کلیدها → کادر پروکسی"})
+    out["sections"].append({"title": "🌐 دسترسی شبکه از سرور تو", "items": host_items})
+
+    # ── ۵) جمع‌بندی
+    ok = sum(1 for sec in out["sections"] for it in sec["items"] if it.get("ok") is True)
+    bad = sum(1 for sec in out["sections"] for it in sec["items"] if it.get("ok") is False)
+    skip = sum(1 for sec in out["sections"] for it in sec["items"] if it.get("ok") is None)
+    out["summary"] = {"ok": ok, "fail": bad, "skip": skip}
+    out["verdict"] = ("همه‌چیز سالم است ✅" if bad == 0 else
+                      f"{bad} مورد مشکل دارد ❌ — پایین‌تر راهنمای هر کدام نوشته شده")
+    out["checked_at"] = _t.strftime("%Y-%m-%d %H:%M:%S")
+    return out
+
+
 @app.get("/api/history")
 async def history(session: str = "", limit: int = 200):
     """تاریخچه: پرامپت‌ها (همه یا یک نشست) + فهرست نشست‌ها + امتیازها."""
