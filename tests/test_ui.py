@@ -290,8 +290,10 @@ def test_huge_models_registered() -> None:
     from mega.config import PROVIDERS
     groq = PROVIDERS["groq"].default_models
     openrouter = PROVIDERS["openrouter"].default_models
-    assert any("kimi-k2" in m for m in groq), "Kimi K2 (۱ تریلیون) در Groq نیست"
-    assert any("maverick" in m for m in groq), "Llama-4-Maverick (۴۰۰ میلیارد) در Groq نیست"
+    # توجه: Groq مدل‌های ۴۰۰ میلیاردی/۱ تریلیونی را از پلن رایگان برداشته؛
+    # بزرگ‌ترین مدل رایگانش الان gpt-oss-120b است (با کلید واقعی تست شد).
+    assert any("gpt-oss-120b" in m for m in groq), "قوی‌ترین مدل رایگان Groq نیست"
+    assert any("compound" in m for m in groq), "سیستم ترکیبی Groq نیست"
     assert any("deepseek-r1:free" in m for m in openrouter), "R1 (۶۷۱ میلیارد) در OpenRouter نیست"
     assert any("235b" in m for m in openrouter), "Qwen3-235B در OpenRouter نیست"
 
@@ -451,3 +453,16 @@ def test_guide_has_groq_steps() -> None:
                  "Create API Key", "۱۲۷.۰.۰.۱:۱۰۸۰۹" .replace("۱۲۷.۰.۰.۱:۱۰۸۰۹", "127.0.0.1:10809")):
         assert need in g, f"راهنما ناقص است: {need}"
     assert "۱ تریلیون" in g and "۶۷۱ میلیارد" in g
+
+
+def test_groq_models_are_current() -> None:
+    """مدل‌های Groq باید همان‌هایی باشند که با کلید واقعی تست شدند (اسم‌های مرده ممنوع)."""
+    root = Path(__file__).resolve().parents[1]
+    cfg = (root / "mega" / "config.py").read_text(encoding="utf-8")
+    dead = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant",
+            "meta-llama/llama-4-maverick-17b-128e-instruct",
+            "moonshotai/kimi-k2-instruct"]
+    for d in dead:
+        assert d not in cfg, f"مدل بازنشستهٔ Groq برگشته: {d}"
+    for live in ("openai/gpt-oss-120b", "groq/compound", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"):
+        assert live in cfg, f"مدل تأییدشدهٔ Groq غایب است: {live}"

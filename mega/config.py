@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-APP_VERSION = "8.8"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
+APP_VERSION = "8.9"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
 
 ROOT = Path(__file__).resolve().parent.parent
 ENV_PATH = ROOT / ".env"
@@ -193,8 +193,7 @@ PROVIDERS: dict[str, Provider] = {
     ),
     "groq": Provider(
         "groq", "Groq (جهانی — با پروکسی)", "openai", "https://api.groq.com/openai/v1", "GROQ_API_KEY",
-        ["moonshotai/kimi-k2-instruct", "meta-llama/llama-4-maverick-17b-128e-instruct",
-         "openai/gpt-oss-120b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+        ["openai/gpt-oss-120b", "groq/compound", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"],
         "https://console.groq.com/keys",
     ),
     "xai": Provider(
@@ -233,7 +232,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("gemini", ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]),
         ("openai", ["gpt-4o-mini", "gpt-4.1-mini", "gpt-5-mini"]),
         ("anthropic", ["claude-3-5-haiku-latest"]),
-        ("groq", ["llama-3.1-8b-instant"]),
+        ("groq", ["openai/gpt-oss-20b"]),
         ("openrouter", ["google/gemini-2.5-flash", "meta-llama/llama-3.3-70b-instruct"]),
         ("deepseek", ["deepseek-chat"]),
     ],
@@ -298,7 +297,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
                         "meta-llama/llama-3.3-70b-instruct"]),
         ("deepseek", ["deepseek-chat", "deepseek-reasoner"]),
         ("xai", ["grok-4", "grok-3"]),
-        ("groq", ["llama-3.3-70b-versatile"]),
+        ("groq", ["openai/gpt-oss-120b"]),
     ],
     # «پنل جانشین»: وقتی بیش از یک مدل از یک پرووایدر لازم داریم
     "agent": [
@@ -317,8 +316,8 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("gemini", ["gemini-2.5-pro", "gemini-2.5-flash"]),
         ("deepseek", ["deepseek-chat", "deepseek-reasoner"]),
         ("xai", ["grok-4", "grok-3"]),
-        ("groq", ["moonshotai/kimi-k2-instruct", "meta-llama/llama-4-maverick-17b-128e-instruct",
-                  "openai/gpt-oss-120b", "llama-3.3-70b-versatile"]),
+        ("groq", ["groq/compound", "openai/gpt-oss-120b",
+                  "openai/gpt-oss-120b", "openai/gpt-oss-120b"]),
     ],
     "expert2": [
         ("cloudflare", ["@cf/nvidia/nemotron-3-120b-a12b", "@cf/openai/gpt-oss-120b",
@@ -333,7 +332,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
                         "mistralai/mistral-large", "deepseek/deepseek-chat-v3.1"]),
         ("deepseek", ["deepseek-chat", "deepseek-reasoner"]),
         ("xai", ["grok-3", "grok-4"]),
-        ("groq", ["llama-3.3-70b-versatile"]),
+        ("groq", ["openai/gpt-oss-120b"]),
         ("openai", ["gpt-4o-mini", "gpt-4.1-mini"]),
         ("gemini", ["gemini-2.5-flash"]),
         ("anthropic", ["claude-3-5-haiku-latest"]),
@@ -471,10 +470,10 @@ CUSTOM_MODELS: list[str] = _csv("CUSTOM_MODELS")
 PROVIDERS["groq"] = Provider(
     "groq", "Groq — رایگان و بسیار سریع (بدون کارت)", "openai",
     "https://api.groq.com/openai/v1", "GROQ_API_KEY",
-    ["moonshotai/kimi-k2-instruct",                     # ۱ تریلیون پارامتر (MoE)
-     "meta-llama/llama-4-maverick-17b-128e-instruct",   # ۴۰۰ میلیارد (MoE)
-     "openai/gpt-oss-120b",
-     "llama-3.3-70b-versatile", "qwen/qwen3-32b", "openai/gpt-oss-20b"],
+    ["openai/gpt-oss-120b",     # ۱۲۰ میلیارد — قوی‌ترین مدل رایگان Groq (بسیار سریع)
+     "groq/compound",           # سیستم ترکیبی Groq — خودش ابزار و وب‌گردی دارد
+     "qwen/qwen3.8-27b",        # ۲۷ میلیارد — سبک و پرسرعت
+     "openai/gpt-oss-20b"],     # ۲۰ میلیارد — برای نقش‌های سریع
     "https://console.groq.com/keys",
 )
 
