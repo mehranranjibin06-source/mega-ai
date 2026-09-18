@@ -516,3 +516,14 @@ def test_selftest_tab() -> None:
                  "open-meteo.com", "github.com"):
         assert host in src, f"آزمون دسترسی به {host} نیست"
     assert "proxy" in src and "🔀 پروکسی" in src, "آزمون پروکسی نیست"
+
+
+def test_run_server_bat() -> None:
+    """فایل روشن‌کن سرور: ASCII، CRLF، و راهنمای درست."""
+    p = Path(__file__).resolve().parents[1] / "run_server.bat"
+    assert p.exists(), "run_server.bat نیست"
+    raw = p.read_bytes()
+    assert all(b < 127 or b in (13, 10) for b in raw), "کاراکتر غیر ASCII در bat"
+    assert raw.count(b"\n") == raw.count(b"\r\n"), "پایان خط CRLF نیست"
+    txt = raw.decode("ascii")
+    assert "start_vps.py" in txt and "pause" in txt and "78.157.51.73:8000" in txt

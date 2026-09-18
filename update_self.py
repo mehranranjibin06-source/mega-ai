@@ -329,7 +329,11 @@ def restart() -> None:
             f"{kills}\r\n"
             "timeout /t 3 /nobreak >nul\r\n"
             f'cd /d "{ROOT}"\r\n'
-            f'start "" /min cmd /c "{runner} > update_restart.log 2>&1"\r\n'
+            "set PY=python\r\n"
+            "where python >nul 2>&1 || set PY=py\r\n"
+            "where %PY% >nul 2>&1\r\n"
+            'if errorlevel 1 (echo Python not found. Install Python 3 and tick Add-to-PATH. > update_restart.log & exit /b 1)\r\n'
+            'start "" /min cmd /c "%PY% start_vps.py > update_restart.log 2>&1"\r\n'
             'start "" "http://localhost:8000"\r\n'
         )
         helper = ROOT / "_restart_helper.bat"
