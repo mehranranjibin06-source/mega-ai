@@ -294,8 +294,9 @@ def test_huge_models_registered() -> None:
     # بزرگ‌ترین مدل رایگانش الان gpt-oss-120b است (با کلید واقعی تست شد).
     assert any("gpt-oss-120b" in m for m in groq), "قوی‌ترین مدل رایگان Groq نیست"
     assert any("compound" in m for m in groq), "سیستم ترکیبی Groq نیست"
-    assert any("deepseek-r1:free" in m for m in openrouter), "R1 (۶۷۱ میلیارد) در OpenRouter نیست"
-    assert any("235b" in m for m in openrouter), "Qwen3-235B در OpenRouter نیست"
+    # فهرست رایگان OpenRouter هم عوض شده: الان بزرگ‌ترین رایگانش ۵۵۰ میلیارد است
+    assert any("nemotron-3-ultra-550b" in m for m in openrouter), "۵۵۰ میلیاردی رایگان در OpenRouter نیست"
+    assert any("nemotron-3-super-120b" in m for m in openrouter), "۱۲۰ میلیاردی رایگان در OpenRouter نیست"
 
 
 def test_safe_arrays() -> None:
@@ -466,3 +467,36 @@ def test_groq_models_are_current() -> None:
         assert d not in cfg, f"مدل بازنشستهٔ Groq برگشته: {d}"
     for live in ("openai/gpt-oss-120b", "groq/compound", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"):
         assert live in cfg, f"مدل تأییدشدهٔ Groq غایب است: {live}"
+
+
+def test_big_free_550b_registered() -> None:
+    """مغز ۵۵۰ میلیاردی رایگان باید در فهرست OpenRouter باشد (دلیل: درخواست کاربر)."""
+    import sys
+    from pathlib import Path as _P
+    sys.path.insert(0, str(_P(__file__).resolve().parents[1]))
+    from mega.config import PROVIDERS, ROLE_CANDIDATES
+    orp = PROVIDERS["openrouter"].default_models
+    assert any("nemotron-3-ultra-550b" in m for m in orp), "مدل ۵۵۰ میلیاردی رایگان نیست"
+    joined = " ".join(m for _, ms in ROLE_CANDIDATES["expert"] for m in ms)
+    assert "nemotron-3-ultra-550b" in joined or "nemotron-3-super-120b" in joined
+    src = (_P(__file__).resolve().parents[1] / "server.py").read_text(encoding="utf-8")
+    assert '"nemotron-3-ultra-550b": (550' in src, "اندازهٔ ۵۵۰ میلیارد در جدول مغز نیست"
+
+
+def test_brain_label_picks_550b_for_openrouter() -> None:
+    """نشان «مغز فعال» باید ۵۵۰ میلیارد را از نام مدل درست بخواند (بلندترین تطابق برنده)."""
+    import os, sys
+    from pathlib import Path as _P
+    sys.path.insert(0, str(_P(__file__).resolve().parents[1]))
+    import server
+    from mega.config import PROVIDERS
+    for pid, p in PROVIDERS.items():
+        os.environ.pop(p.env_key, None)
+        p.key_override = None
+    os.environ["OPENROUTER_API_KEY"] = "sk-or-test"
+    try:
+        b = server._brain_label()
+        assert b["params"] == 550, b
+        assert "۵۵۰ میلیارد" in b["display"]
+    finally:
+        os.environ["OPENROUTER_API_KEY"] = ""

@@ -229,6 +229,8 @@ BRAIN_SIZE = {
     "gemma-3-27b": (27, "۲۷ میلیارد"), "llama-3.1-8b": (8, "۸ میلیارد"),
     "mistral-small": (24, "۲۴ میلیارد"), "deepseek-chat": (671, "۶۷۱ میلیارد"),
     "qwen3.8-27b": (27, "۲۷ میلیارد"),
+    "nemotron-3-ultra-550b": (550, "۵۵۰ میلیارد"), "nemotron-3-super-120b": (120, "۱۲۰ میلیارد"),
+    "inking": (0, ""), "inkling": (0, ""),
 }
 
 
@@ -244,10 +246,10 @@ def _brain_label() -> dict:
         for m in (getattr(p, "default_models", None) or [])[:5]:
             low = m.lower()
             size, label = 0, ""
-            for key, (val, fa) in BRAIN_SIZE.items():
-                if key in low:
-                    size, label = val, fa
-                    break
+            # بلندترین تطابق برنده است (وگرنه «nemotron» عمومی‌تر از «nemotron-3-ultra-550b» می‌برد)
+            hits = [(len(k), v) for k, v in BRAIN_SIZE.items() if k in low]
+            if hits:
+                size, label = max(hits, key=lambda x: x[0])[1]
             if not size:                      # ناشناخته → از نام حدس بزن (حالت MoE مثل a22b را رد کن)
                 guess = re.sub(r"[-_]a\d+b", "", low).replace("-", "").replace("_", "")
                 n = re.search(r"(\d+\.?\d*)\s*([bt])(?![a-z0-9])", guess)

@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-APP_VERSION = "8.9"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
+APP_VERSION = "9.0"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
 
 ROOT = Path(__file__).resolve().parent.parent
 ENV_PATH = ROOT / ".env"
@@ -171,7 +171,9 @@ PROVIDERS: dict[str, Provider] = {
     "openrouter": Provider(
         "openrouter", "OpenRouter (جهانی — با پروکسی)", "openai",
         "https://openrouter.ai/api/v1", "OPENROUTER_API_KEY",
-        ["x-ai/grok-4", "deepseek/deepseek-chat-v3.1", "qwen/qwen3-235b-a22b",
+        ["nvidia/nemotron-3-ultra-550b-a55b:free",                       # ۵۵۰ میلیارد پارامتر — رایگان (۰ دلار)
+         "nvidia/nemotron-3-super-120b-a12b:free",                     # ۱۲۰ میلیارد — رایگان
+         "x-ai/grok-4", "deepseek/deepseek-chat-v3.1", "qwen/qwen3-235b-a22b",
          "meta-llama/llama-3.3-70b-instruct", "google/gemini-2.5-pro"],
         "https://openrouter.ai/keys",
     ),
@@ -248,7 +250,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("anthropic", ["claude-sonnet-4-5", "claude-3-7-sonnet-latest", "claude-3-5-sonnet-latest"]),
         ("openai", ["gpt-5", "gpt-4.1", "gpt-4o"]),
         ("gemini", ["gemini-2.5-pro", "gemini-2.5-flash"]),
-        ("openrouter", ["x-ai/grok-4", "deepseek/deepseek-chat-v3.1"]),
+        ("openrouter", ["nvidia/nemotron-3-ultra-550b-a55b:free", "nvidia/nemotron-3-super-120b-a12b:free", "x-ai/grok-4", "deepseek/deepseek-chat-v3.1"]),
         ("deepseek", ["deepseek-reasoner", "deepseek-chat"]),
     ],
     "critic": [
@@ -264,7 +266,8 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("anthropic", ["claude-3-7-sonnet-latest", "claude-3-5-sonnet-latest"]),
         ("gemini", ["gemini-2.5-pro", "gemini-2.5-flash"]),
         ("deepseek", ["deepseek-reasoner", "deepseek-chat"]),
-        ("openrouter", ["deepseek/deepseek-chat-v3.1"]),
+        ("openrouter", ["nvidia/nemotron-3-ultra-550b-a55b:free", "nvidia/nemotron-3-super-120b-a12b:free",
+                        "deepseek/deepseek-chat-v3.1"]),
     ],
     "verifier": [
         ("cloudflare", ["@cf/nvidia/nemotron-3-120b-a12b", "@cf/openai/gpt-oss-120b",
@@ -278,7 +281,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("gemini", ["gemini-2.5-pro", "gemini-2.5-flash"]),
         ("openai", ["gpt-4.1", "gpt-4o"]),
         ("anthropic", ["claude-3-5-haiku-latest"]),
-        ("openrouter", ["x-ai/grok-4", "qwen/qwen3-235b-a22b"]),
+        ("openrouter", ["nvidia/nemotron-3-ultra-550b-a55b:free", "nvidia/nemotron-3-super-120b-a12b:free", "x-ai/grok-4", "deepseek/deepseek-chat-v3.1"]),
     ],
     # اعضای پنل خبرگان از پرووایدرهای متفاوت انتخاب می‌شوند تا خطاها هم‌بسته نشوند
     "expert": [
@@ -293,8 +296,9 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("openai", ["gpt-5", "gpt-4.1", "gpt-4o"]),
         ("anthropic", ["claude-sonnet-4-5", "claude-3-7-sonnet-latest", "claude-3-5-sonnet-latest"]),
         ("gemini", ["gemini-2.5-pro", "gemini-2.5-flash"]),
-        ("openrouter", ["x-ai/grok-4", "deepseek/deepseek-chat-v3.1", "qwen/qwen3-235b-a22b",
-                        "meta-llama/llama-3.3-70b-instruct"]),
+        ("openrouter", ["nvidia/nemotron-3-ultra-550b-a55b:free",
+                        "nvidia/nemotron-3-super-120b-a12b:free",
+                        "x-ai/grok-4", "deepseek/deepseek-chat-v3.1"]),
         ("deepseek", ["deepseek-chat", "deepseek-reasoner"]),
         ("xai", ["grok-4", "grok-3"]),
         ("groq", ["openai/gpt-oss-120b"]),
@@ -311,8 +315,8 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
           # کارگزار خودمختار: قوی‌ترین مدل موجود، ترجیحاً با توان ابزار
         ("anthropic", ["claude-sonnet-4-5", "claude-3-7-sonnet-latest"]),
         ("openai", ["gpt-5", "gpt-4.1", "gpt-4o"]),
-        ("openrouter", ["anthropic/claude-sonnet-4.5", "x-ai/grok-4", "deepseek/deepseek-chat-v3.1",
-                        "qwen/qwen3-235b-a22b"]),
+        ("openrouter", ["nvidia/nemotron-3-ultra-550b-a55b:free", "nvidia/nemotron-3-super-120b-a12b:free", "anthropic/claude-sonnet-4.5", "x-ai/grok-4",
+                        "deepseek/deepseek-chat-v3.1", "qwen/qwen3-235b-a22b"]),
         ("gemini", ["gemini-2.5-pro", "gemini-2.5-flash"]),
         ("deepseek", ["deepseek-chat", "deepseek-reasoner"]),
         ("xai", ["grok-4", "grok-3"]),
@@ -480,10 +484,10 @@ PROVIDERS["groq"] = Provider(
 PROVIDERS["openrouter"] = Provider(
     "openrouter", "OpenRouter — مدل‌های رایگان (بدون کارت)", "openai",
     "https://openrouter.ai/api/v1", "OPENROUTER_API_KEY",
-    ["deepseek/deepseek-r1:free",                       # ۶۷۱ میلیارد (MoE)
-     "moonshotai/kimi-k2:free",                         # ۱ تریلیون (MoE)
-     "qwen/qwen3-235b-a22b:free",                       # ۲۳۵ میلیارد
-     "meta-llama/llama-4-maverick:free",                # ۴۰۰ میلیارد (MoE)
+    ["nvidia/nemotron-3-ultra-550b-a55b:free",    # ۵۵۰ میلیارد — بزرگ‌ترین مدل رایگان الان (تست‌شده در فهرست OpenRouter)
+     "nvidia/nemotron-3-super-120b-a12b:free",  # ۱۲۰ میلیارد — رایگان
+     "qwen/qwen3.8-27b:free",
+     "deepseek/deepseek-v4-flash-0731:free",
      "openai/gpt-oss-120b:free", "openai/gpt-oss-20b:free"],
     "https://openrouter.ai/keys",
 )
