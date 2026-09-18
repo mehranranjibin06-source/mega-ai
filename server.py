@@ -229,6 +229,7 @@ BRAIN_SIZE = {
     "gemma-3-27b": (27, "۲۷ میلیارد"), "llama-3.1-8b": (8, "۸ میلیارد"),
     "mistral-small": (24, "۲۴ میلیارد"), "deepseek-chat": (671, "۶۷۱ میلیارد"),
     "qwen3.8-27b": (27, "۲۷ میلیارد"),
+    "openai-fast": (20, "۲۰ میلیارد (بی‌کلید)"),
     "nemotron-3-ultra-550b": (550, "۵۵۰ میلیارد"), "nemotron-3-super-120b": (120, "۱۲۰ میلیارد"),
     "inking": (0, ""), "inkling": (0, ""),
 }
@@ -442,6 +443,7 @@ def _probe_hosts() -> list[tuple[str, str]]:
         ("https://generativelanguage.googleapis.com/v1beta/models", "Google Gemini"),
         ("https://api.telegram.org", "تلگرام"),
         # ── ابزارهای رایگان برنامه
+        ("https://text.pollinations.ai/models", "Pollinations (هوش بی‌کلید)"),
         ("https://api.open-meteo.com/v1/forecast?latitude=35&longitude=51", "هواشناسی (بی‌کلید)"),
         ("https://de1.api.radio-browser.info/json/stations/topvote/2", "رادیو اینترنتی"),
         ("https://iptv-org.github.io/api/streams.json", "فهرست تلویزیون"),
@@ -557,6 +559,19 @@ async def selftest(deep: int = 0):
             async def one(pid: str, p) -> dict:
                 base = p.api_base
                 try:
+                    if not getattr(p, "needs_key", True):        # سرویس عمومی: با یک گفتگوی کوتاه تست کن
+                        rr = await client.post(f"{base.rstrip('/')}/chat/completions",
+                                               headers={"content-type": "application/json"},
+                                               json={"model": (p.default_models or ["openai"])[0],
+                                                     "messages": [{"role": "user", "content": "سلام"}]},
+                                               timeout=25)
+                        if rr.status_code == 200:
+                            return {"name": f"{p.label} — {pid}", "ok": True,
+                                    "detail": "✅ بدون کلید کار می‌کند (سرویس عمومی)"}
+                        return {"name": f"{p.label} — {pid}", "ok": False,
+                                "detail": f"❌ پاسخ {rr.status_code}",
+                                "hint": "این سرویس عمومی از شبکهٔ سرورت باز نیست"}
+
                     if p.kind == "gemini":
                         r = await client.get(f"{base}/models", params={"key": p.key}, timeout=12)
                     else:

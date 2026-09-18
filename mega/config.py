@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-APP_VERSION = "9.3"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
+APP_VERSION = "9.5"          # نسخهٔ برنامه (در هدر برنامه دیده می‌شود)
 
 ROOT = Path(__file__).resolve().parent.parent
 ENV_PATH = ROOT / ".env"
@@ -67,7 +67,8 @@ def save_keys(pairs: dict[str, str]) -> None:
 
 # ---------------------------------------------------------------- providers
 IRAN_FRIENDLY = {"avalai", "gapgpt", "metisai", "winkapi", "sinox", "jarvis",
-                 "deepseek", "qwen", "moonshot"}
+                 "deepseek", "qwen", "moonshot"    "1xai",
+}
 
 
 @dataclass
@@ -81,6 +82,7 @@ class Provider:
     signup: str = ""
     key_override: Optional[str] = None   # برای حالت نمایشی/پروکسی داخلی
     custom_base: Optional[str] = None    # برای پرووایدر سفارشی
+    needs_key: bool = True               # False = سرویس عمومی، بدون کلید کار می‌کند
 
     @property
     def iran_friendly(self) -> bool:
@@ -95,6 +97,8 @@ class Provider:
 
     @property
     def key(self) -> Optional[str]:
+        if not self.needs_key:
+            return self.key_override or "public"      # سرویس بی‌کلید (مثل Pollinations)
         if self.key_override:
             return self.key_override
         return (os.environ.get(self.env_key) or "").strip() or None
@@ -102,6 +106,8 @@ class Provider:
     @property
     def real_key(self) -> Optional[str]:
         """فقط کلید واقعی کاربر (بدون override) — برای تشخیص حالت نمایشی."""
+        if not self.needs_key:
+            return "public"                           # سرویس عمومی: آماده است، حالت نمایشی لازم نیست
         return (os.environ.get(self.env_key) or "").strip() or None
 
     @property
@@ -220,11 +226,12 @@ TIER_PREFS: dict[str, list[str]] = {
 }
 
 # گیت‌وی‌های ایرانی اول فهرست‌اند تا اگر کلیدشان باشد، همه‌ی نقش‌ها با آن‌ها پر شود
-IRAN_GATEWAYS = ["avalai", "gapgpt", "metisai", "winkapi", "sinox", "jarvis"]
+IRAN_GATEWAYS = ["1xai", "avalai", "gapgpt", "metisai", "winkapi", "sinox", "jarvis"]
 
 ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
     "router": [
         ("cloudflare", ["@cf/meta/llama-3.1-8b-instruct-fp8"]),
+        ("1xai", ["gpt-4o-mini", "gemini-2.5-flash", "claude-3-5-haiku", "gpt-4o"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -235,12 +242,14 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("openai", ["gpt-4o-mini", "gpt-4.1-mini", "gpt-5-mini"]),
         ("anthropic", ["claude-3-5-haiku-latest"]),
         ("groq", ["openai/gpt-oss-20b"]),
+        ("pollinations", ["openai-fast", "openai"]),
         ("openrouter", ["google/gemini-2.5-flash", "meta-llama/llama-3.3-70b-instruct"]),
         ("deepseek", ["deepseek-chat"]),
     ],
     "judge": [
         ("cloudflare", ["@cf/nvidia/nemotron-3-120b-a12b", "@cf/openai/gpt-oss-120b",
                      "@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/qwen/qwen2.5-coder-32b-instruct"]),
+        ("1xai", ["gpt-4o-mini", "gemini-2.5-flash", "claude-3-5-haiku", "gpt-4o"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -256,6 +265,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
     "critic": [
         ("cloudflare", ["@cf/nvidia/nemotron-3-120b-a12b", "@cf/openai/gpt-oss-120b",
                      "@cf/meta/llama-3.3-70b-instruct-fp8-fast"]),
+        ("1xai", ["gpt-4o-mini", "gemini-2.5-flash", "claude-3-5-haiku", "gpt-4o"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -272,6 +282,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
     "verifier": [
         ("cloudflare", ["@cf/nvidia/nemotron-3-120b-a12b", "@cf/openai/gpt-oss-120b",
                      "@cf/meta/llama-3.3-70b-instruct-fp8-fast"]),
+        ("1xai", ["gpt-4o-mini", "gemini-2.5-flash", "claude-3-5-haiku", "gpt-4o"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -287,6 +298,7 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
     "expert": [
         ("cloudflare", ["@cf/nvidia/nemotron-3-120b-a12b", "@cf/openai/gpt-oss-120b",
                      "@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/qwen/qwen2.5-coder-32b-instruct"]),
+        ("1xai", ["gpt-4o-mini", "gemini-2.5-flash", "claude-3-5-haiku", "gpt-4o"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -301,12 +313,17 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
                         "x-ai/grok-4", "deepseek/deepseek-chat-v3.1"]),
         ("deepseek", ["deepseek-chat", "deepseek-reasoner"]),
         ("xai", ["grok-4", "grok-3"]),
+        ("llm7", ["gemini-3.1-flash-lite", "minimax-m2.7", "GLM-5.3-Flash"]),
+        ("nvidia", ["deepseek-ai/deepseek-v4-flash-0731", "meta/llama-3.3-70b-instruct"]),
+        ("zai", ["glm-4.7-flash", "glm-4.5-flash"]),
         ("groq", ["openai/gpt-oss-120b"]),
+        ("pollinations", ["openai", "openai-fast"]),
     ],
     # «پنل جانشین»: وقتی بیش از یک مدل از یک پرووایدر لازم داریم
     "agent": [
         ("cloudflare", ["@cf/nvidia/nemotron-3-120b-a12b", "@cf/openai/gpt-oss-120b",
                      "@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/qwen/qwen2.5-coder-32b-instruct"]),
+        ("1xai", ["gpt-4o-mini", "gemini-2.5-flash", "claude-3-5-haiku", "gpt-4o"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -320,12 +337,16 @@ ROLE_CANDIDATES: dict[str, list[tuple[str, list[str]]]] = {
         ("gemini", ["gemini-2.5-pro", "gemini-2.5-flash"]),
         ("deepseek", ["deepseek-chat", "deepseek-reasoner"]),
         ("xai", ["grok-4", "grok-3"]),
+        ("llm7", ["gemini-3.1-flash-lite", "minimax-m2.7", "GLM-5.3-Flash"]),
+        ("nvidia", ["deepseek-ai/deepseek-v4-flash-0731", "meta/llama-3.3-70b-instruct"]),
+        ("zai", ["glm-4.7-flash", "glm-4.5-flash"]),
         ("groq", ["groq/compound", "openai/gpt-oss-120b",
                   "openai/gpt-oss-120b", "openai/gpt-oss-120b"]),
     ],
     "expert2": [
         ("cloudflare", ["@cf/nvidia/nemotron-3-120b-a12b", "@cf/openai/gpt-oss-120b",
                      "@cf/meta/llama-3.3-70b-instruct-fp8-fast"]),
+        ("1xai", ["gpt-4o-mini", "gemini-2.5-flash", "claude-3-5-haiku", "gpt-4o"]),
         ("avalai", ["gpt-5-mini", "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-haiku", "gpt-5", "claude-sonnet-4-5"]),
         ("gapgpt", ["gpt-4o-mini", "gpt-5-mini", "gpt-4o", "gpt-5", "claude-sonnet-4-5"]),
         ("metisai", ["gpt-4o-mini", "gpt-4o", "gpt-5"]),
@@ -492,11 +513,50 @@ PROVIDERS["openrouter"] = Provider(
     "https://openrouter.ai/keys",
 )
 
+PROVIDERS["pollinations"] = Provider(
+    "pollinations", "Pollinations — رایگان و بدون هیچ کلیدی 🌐", "openai",
+    "https://text.pollinations.ai/openai", "POLLINATIONS_API_KEY",
+    ["openai", "openai-fast"],          # openai-fast = GPT-OSS 20B (تست‌شده)
+    "https://pollinations.ai",
+    needs_key=False,                    # ← بدون ثبت‌نام و بدون کلید کار می‌کند
+)
+
 PROVIDERS["mistral"] = Provider(
     "mistral", "Mistral — حالت رایگان (بدون کارت)", "openai",
     "https://api.mistral.ai/v1", "MISTRAL_API_KEY",
     ["mistral-small-latest", "mistral-medium-latest", "codestral-latest", "mistral-large-latest"],
     "https://console.mistral.ai/api-keys",
+)
+
+# ─────────── کلیدهای رایگان تازه (تست‌شده ۲۰۲۶-۰۹) ───────────
+PROVIDERS["1xai"] = Provider(
+    "1xai", "1xAi — ایرانی، ۳۸+ مدل، بدون VPN 🇮🇷", "openai",
+    "https://1xai.ir/v1", "X1AI_API_KEY",
+    ["gpt-4o-mini", "gemini-2.5-flash", "claude-3-5-haiku", "deepseek-chat", "gpt-4o"],
+    "https://1xai.ir",
+)
+
+PROVIDERS["llm7"] = Provider(
+    "llm7", "LLM7 — کلید رایگان با گیت‌هاب", "openai",
+    "https://api.llm7.io/v1", "LLM7_API_KEY",
+    ["gemini-3.1-flash-lite", "DeepSeek-V4-Flash-0731", "GLM-5.3-Flash",
+     "minimax-m2.7", "codestral-latest", "mistral-Nemo-Instruct-2407"],
+    "https://dash.llm7.io/#/api-keys",
+)
+
+PROVIDERS["nvidia"] = Provider(
+    "nvidia", "NVIDIA NIM — رایگان بدون کارت (۸۲ مدل)", "openai",
+    "https://integrate.api.nvidia.com/v1", "NVIDIA_API_KEY",
+    ["deepseek-ai/deepseek-v4-flash-0731", "meta/llama-3.3-70b-instruct",
+     "openai/gpt-oss-120b", "qwen/qwen3-235b-a22b"],
+    "https://build.nvidia.com",
+)
+
+PROVIDERS["zai"] = Provider(
+    "zai", "Z.ai (GLM) — مدل‌های Flash رایگان", "openai",
+    "https://api.z.ai/api/paas/v4", "ZAI_API_KEY",
+    ["glm-4.7-flash", "glm-4.5-flash", "glm-4.6", "glm-4.5"],
+    "https://z.ai",
 )
 
 PROVIDERS["cloudflare"] = Provider(
@@ -548,6 +608,7 @@ def apply_env_bases() -> None:
             f"https://api.cloudflare.com/client/v4/accounts/{_cid}/ai/v1")
 
 
-_providers_free = tuple(k for k in ("groq", "openrouter", "mistral", "cloudflare") if k in PROVIDERS)
+_providers_free = tuple(k for k in ("pollinations", "groq", "openrouter", "mistral", "cloudflare")
+                        if k in PROVIDERS)
 
 SETTINGS = Settings.from_env()

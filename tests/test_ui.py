@@ -527,3 +527,39 @@ def test_run_server_bat() -> None:
     assert raw.count(b"\n") == raw.count(b"\r\n"), "پایان خط CRLF نیست"
     txt = raw.decode("ascii")
     assert "start_vps.py" in txt and "pause" in txt and "78.157.51.73:8000" in txt
+
+
+def test_keyless_provider() -> None:
+    """سرویس بی‌کلید (Pollinations): بدون هیچ کلیدی «آماده» حساب می‌شود و نقش‌ها از آن استفاده می‌کنند."""
+    import sys
+    from pathlib import Path as _P
+    sys.path.insert(0, str(_P(__file__).resolve().parents[1]))
+    from mega.config import PROVIDERS, ROLE_CANDIDATES
+    p = PROVIDERS["pollinations"]
+    assert p.needs_key is False, "Pollinations باید بی‌کلید باشد"
+    assert p.key == "public", "سرویس بی‌کلید باید کلید آماده بدهد"
+    assert p.real_key == "public", "سرویس بی‌کلید باید «واقعی» شمرده شود تا حالت نمایشی خاموش بماند"
+    assert p.configured and p.api_base.endswith("/openai")
+    assert "openai" in p.default_models
+    used = any(pid == "pollinations" for pid, _ in ROLE_CANDIDATES["expert"]) or \
+           any(pid == "pollinations" for pid, _ in ROLE_CANDIDATES["router"])
+    assert used, "Pollinations در فهرست نقش‌ها نیست"
+
+
+def test_new_free_providers() -> None:
+    """سرویس‌های رایگان تازه ثبت شده‌اند و راهنما لیست کامل را دارد."""
+    import sys
+    from pathlib import Path as _P
+    sys.path.insert(0, str(_P(__file__).resolve().parents[1]))
+    from mega.config import PROVIDERS
+    for pid, base in (("1xai", "1xai.ir"), ("llm7", "llm7.io"),
+                      ("nvidia", "integrate.api.nvidia.com"), ("zai", "api.z.ai")):
+        p = PROVIDERS[pid]
+        assert base in p.api_base, f"{pid} آدرسش درست نیست"
+        assert p.default_models, f"{pid} مدل ندارد"
+        assert p.signup, f"{pid} لینک ثبت‌نام ندارد"
+    g = (_P(__file__).resolve().parents[1] / "web" / "guide.html").read_text(encoding="utf-8")
+    for need in ("1xai.ir", "sinoxapi.com", "winkapi.net", "gapgpt.app", "jarvis.you",
+                 "avalai.ir", "llm7.io", "build.nvidia.com", "z.ai",
+                 "aistudio.google.com", "console.mistral.ai"):
+        assert need in g, f"راهنما لینک {need} را ندارد"
