@@ -357,20 +357,47 @@ def main() -> int:
     changed: list[str] = []
     src = ""
     zip_err = file_err = None
-    try:                                     # ۱) آرشیو محلی (بدون اینترنت)
-        changed, after, src = try_local_zip()
-    except Exception as e1:  # noqa: BLE001
-        zip_err = e1
+    done = False
+
+    def _explicit_zip() -> bool:
+        if "--zip" not in sys.argv:
+            return False
+        try:
+            return Path(sys.argv[sys.argv.index("--zip") + 1]).expanduser().is_file()
+        except Exception:  # noqa: BLE001
+            return False
+
+    # ترتیب مهم است: اول آرشیو دستی (اگر خودت دادی) → بعد اینترنت → و آخر از همه
+    # آرشیوی که «تصادفی» در پوشه‌ها پیدا شود (چون ممکن است نسخهٔ قدیمی باشد).
+    if _explicit_zip():
+        try:
+            changed, after, src = try_local_zip()
+            done = True
+        except Exception as e1:  # noqa: BLE001
+            zip_err = e1
+    if not done:
         print()
-        try:                                 # ۲) آینه‌های ZIP
+        try:                                 # ۱) آینه‌های ZIP
             changed, after, src = try_zip()
+            done = True
         except Exception as e2:  # noqa: BLE001
-            print()
-            try:                             # ۳) فایل‌به‌فایل از CDN
-                changed, after, src = try_files()
-            except Exception as e3:  # noqa: BLE001
-                file_err = e3
-    if file_err is not None:
+            zip_err = e2
+    if not done:
+        print()
+        try:                                 # ۲) فایل‌به‌فایل از CDN
+            changed, after, src = try_files()
+            done = True
+        except Exception as e3:  # noqa: BLE001
+            file_err = e3
+    if not done:
+        try:                                 # ۳) آخرین راه: آرشیو محلی (بدون اینترنت)
+            say("🌐 اینترنت جواب نداد — نصب از آرشیو محلی (ممکن است نسخهٔ قدیمی‌تر باشد)…")
+            changed, after, src = try_local_zip()
+            done = True
+        except Exception as e4:  # noqa: BLE001
+            file_err = e4
+
+    if not done:
         print("\n  ❌ آپدیت نشد — هیچ راهی باز نشد (اینترنت گیت‌هاب/CDN را بسته است).")
         say(f"آینه‌ها: {zip_err}")
         say(f"CDN: {file_err}")
