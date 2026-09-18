@@ -166,6 +166,81 @@ def _write_if_new(rel: str, data: bytes, changed: list[str]) -> None:
 
 
 # ───────────────────────── روش ۱: ZIP ─────────────────────────
+def _extract_install(data: bytes) -> list[str]:
+    """آرشیو ZIP را باز می‌کند و فایل‌های پروژه را روی نصب فعلی می‌ریزد (محافظت‌شده)."""
+    if len(data) < 200_000:
+        raise RuntimeError(f"آرشیو خیلی کوچک است ({len(data)} بایت)")
+    tmp = Path(tempfile.mkdtemp(prefix="mega-up-"))
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        if not any(n.endswith("mega/config.py") for n in z.namelist()):
+            raise RuntimeError("آرشیو، پروژهٔ mega-ai نبود")
+        for n in z.namelist():
+            tgt = (tmp / n).resolve()
+            if not str(tgt).startswith(str(tmp.resolve())):
+                raise RuntimeError("آرشیو ناایمن")
+        z.extractall(tmp)
+    box = next((d for d in tmp.iterdir() if d.is_dir() and (d / "mega").is_dir()), tmp)
+    changed: list[str] = []
+    for item in sorted(box.rglob("*")):
+        rel = item.relative_to(box)
+        if any(part in KEEP_DIRS for part in rel.parts) or item.name in KEEP_FILES or item.suffix == ".pyc":
+            continue
+        if item.is_dir():
+            (ROOT / rel).mkdir(parents=True, exist_ok=True)
+            continue
+        _write_if_new(str(rel).replace("\\", "/"), item.read_bytes(), changed)
+    shutil.rmtree(tmp, ignore_errors=True)
+    return changed
+
+
+def find_local_zip() -> Path | None:
+    """دنبال آرشیو محلی می‌گردد (کنار همین فایل، پوشهٔ برنامه، Downloads…).
+
+    کاربرد: وقتی شبکهٔ ایران گیت‌هاب را باز نمی‌کند، کاربر آرشیو را از چت می‌گیرد
+    و همین اسکریپت بدون هیچ اتصال اینترنتی نصبش می‌کند.
+    """
+    names = ["mega-ai.zip", "mega-ai-main.zip", "mega_ai.zip", "mega-ai (1).zip"]
+    here = Path(__file__).resolve().parent
+    spots = [here, here.parent, Path.cwd(), Path.cwd().parent, ROOT, ROOT.parent,
+             Path.home(), Path.home() / "Downloads", Path.home() / "Desktop"]
+    if os.name == "nt":
+        for env in ("USERPROFILE", "TEMP", "TMP"):
+            v = os.environ.get(env)
+            if v:
+                spots.append(Path(v))
+                spots.append(Path(v) / "Downloads")
+    for d in spots:
+        try:
+            if not d.is_dir():
+                continue
+        except OSError:
+            continue
+        for n in names:
+            f = d / n
+            try:
+                if f.is_file() and f.stat().st_size > 200_000:
+                    return f
+            except OSError:
+                continue
+    return None
+
+
+def try_local_zip() -> tuple[list[str], str, str]:
+    """نصب از آرشیو محلی — بدون اینترنت."""
+    explicit = None
+    if "--zip" in sys.argv:
+        try:
+            explicit = Path(sys.argv[sys.argv.index("--zip") + 1]).expanduser()
+        except Exception:  # noqa: BLE001
+            explicit = None
+    path = explicit if (explicit and explicit.is_file()) else find_local_zip()
+    if not path or not path.is_file():
+        raise RuntimeError("آرشیو محلی پیدا نشد")
+    say(f"📦 نصب از فایل محلی (بدون اینترنت): {path.name}  ({path.stat().st_size // 1024} KB)")
+    changed = _extract_install(path.read_bytes())
+    return changed, ver_of(ROOT), f"local:{path.name}"
+
+
 def try_zip() -> tuple[list[str], str, str]:
     last = ""
     for url in MIRRORS:
@@ -175,27 +250,7 @@ def try_zip() -> tuple[list[str], str, str]:
             if len(data) < 300_000:
                 last = f"{url} → فقط {len(data)} بایت"
                 continue
-            tmp = Path(tempfile.mkdtemp(prefix="mega-up-"))
-            with zipfile.ZipFile(io.BytesIO(data)) as z:
-                if not any(n.endswith("mega/config.py") for n in z.namelist()):
-                    last = f"{url} → ساختار پروژه نبود"
-                    continue
-                for n in z.namelist():
-                    tgt = (tmp / n).resolve()
-                    if not str(tgt).startswith(str(tmp.resolve())):
-                        raise RuntimeError("آرشیو ناایمن")
-                z.extractall(tmp)
-            box = next((d for d in tmp.iterdir() if d.is_dir() and (d / "mega").is_dir()), tmp)
-            changed: list[str] = []
-            for item in sorted(box.rglob("*")):
-                rel = item.relative_to(box)
-                if any(part in KEEP_DIRS for part in rel.parts) or item.name in KEEP_FILES or item.suffix == ".pyc":
-                    continue
-                if item.is_dir():
-                    (ROOT / rel).mkdir(parents=True, exist_ok=True)
-                    continue
-                _write_if_new(str(rel).replace("\\", "/"), item.read_bytes(), changed)
-            shutil.rmtree(tmp, ignore_errors=True)
+            changed = _extract_install(data)
             return changed, ver_of(ROOT), url
         except Exception as e:  # noqa: BLE001
             last = f"{url} → {type(e).__name__}: {e}"
@@ -301,18 +356,28 @@ def main() -> int:
     print("=" * 66)
     changed: list[str] = []
     src = ""
-    try:
-        changed, after, src = try_zip()
-    except Exception as zip_err:  # noqa: BLE001
+    zip_err = file_err = None
+    try:                                     # ۱) آرشیو محلی (بدون اینترنت)
+        changed, after, src = try_local_zip()
+    except Exception as e1:  # noqa: BLE001
+        zip_err = e1
         print()
-        try:
-            changed, after, src = try_files()
-        except Exception as file_err:  # noqa: BLE001
-            print("\n  ❌ آپدیت نشد.")
-            say(str(zip_err))
-            say(str(file_err))
-            print("\n  راهنما: اینترنت/VPN را روشن کن و همین فایل را دوباره اجرا کن.")
-            return 1
+        try:                                 # ۲) آینه‌های ZIP
+            changed, after, src = try_zip()
+        except Exception as e2:  # noqa: BLE001
+            print()
+            try:                             # ۳) فایل‌به‌فایل از CDN
+                changed, after, src = try_files()
+            except Exception as e3:  # noqa: BLE001
+                file_err = e3
+    if file_err is not None:
+        print("\n  ❌ آپدیت نشد — هیچ راهی باز نشد (اینترنت گیت‌هاب/CDN را بسته است).")
+        say(f"آینه‌ها: {zip_err}")
+        say(f"CDN: {file_err}")
+        print("\n  راه‌حل بدون اینترنت:")
+        print("    ۱) فایل mega-ai.zip را از چت بگیر و بگذارش کنار همین فایل")
+        print("    ۲) دوباره اجرا کن:  python update_self.py --zip mega-ai.zip --restart")
+        return 1
 
     print()
     print(f"  ✅ نسخه: v{before} → v{after}     ({len(changed)} فایل به‌روز شد)")
