@@ -580,3 +580,24 @@ def test_auto_prereqs() -> None:
     assert sth.is_file(), "START-HERE.txt نیست"
     txt = sth.read_bytes().decode("utf-8-sig")
     assert "start_vps.py" in txt and "mehran" in txt and "pip install" in txt
+
+
+def test_autostart_files() -> None:
+    """بالا آمدن خودکار: setup_autostart.bat + نگهبان در run_server.bat + PORT.txt."""
+    root = Path(__file__).resolve().parents[1]
+    for name in ("setup_autostart.bat", "setup_autostart.ps1", "run_server.bat"):
+        raw = (root / name).read_bytes()
+        assert all(b < 127 or b in (13, 10) for b in raw), f"غیر ASCII در {name}"
+        assert raw.count(b"\n") == raw.count(b"\r\n"), f"CRLF در {name}"
+    st = (root / "setup_autostart.bat").read_text(encoding="ascii")
+    for need in ("RunAs", "setup_autostart.ps1", "run_server.bat", "PORT.txt"):
+        assert need in st, f"setup_autostart ناقص است: {need}"
+    ps = (root / "setup_autostart.ps1").read_text(encoding="ascii")
+    for need in ("New-ScheduledTaskAction", "-AtStartup", "New-ScheduledTaskPrincipal",
+                 "New-NetFirewallRule", "Startup", "Stop-Process", "8000..8010"):
+        assert need in ps, f"setup_autostart.ps1 ناقص است: {need}"
+    rn = (root / "run_server.bat").read_text(encoding="ascii")
+    assert ":loop" in rn and "goto loop" in rn and "MEGA_WATCHDOG" in rn, "نگهبان در run_server نیست"
+    src = (root / "start_vps.py").read_text(encoding="utf-8")
+    assert "def write_port_file" in src and "PORT.txt" in src, "PORT.txt نوشته نمی‌شود"
+    assert "write_port_file(port, lan_ip())" in src, "فراخوانی PORT.txt نیست"

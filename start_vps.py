@@ -21,6 +21,7 @@ import socket
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -203,6 +204,18 @@ def open_firewall(port: int) -> bool:
         return False
 
 
+def write_port_file(port: int, ip: str) -> None:
+    """پورتِ واقعیِ باز را در PORT.txt می‌نویسد تا همیشه بدانی آدرس کدام است."""
+    try:
+        lines = [f"PORT={port}",
+                 f"PHONE=http://{ip or '78.157.51.73'}:{port}",
+                 f"LOCAL=http://127.0.0.1:{port}",
+                 f"UPDATED={time.strftime('%Y-%m-%d %H:%M:%S')}"]
+        (ROOT / "PORT.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def lan_ip() -> str:
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -354,6 +367,10 @@ def main() -> int:
     # ۴) پورت + فایروال
     wanted = int(os.environ.get("MEGA_PORT") or os.environ.get("PORT") or DEFAULT_PORT)
     port = choose_port(wanted)
+    try:
+        write_port_file(port, lan_ip())          # PORT.txt برای اینکه آدرس گم نشود
+    except Exception:  # noqa: BLE001
+        pass
     if port != wanted:
         say(f"ℹ️  پورت {wanted} مشغول بود → پورت {port} انتخاب شد.",
             f"[i] Port {wanted} was busy -> using port {port}")
