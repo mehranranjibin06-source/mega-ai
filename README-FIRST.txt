@@ -82,3 +82,32 @@ FREE MODE (no API key needed):
   Also supported the same way: Groq (gsk_...), OpenRouter (sk-or-...), Mistral,
   AvalAI (aa-...), GapGPT (sk-...). Paste any of them in the same box.
   Paste the token and the Account ID separated by a space if you want both at once.
+
+THREE WAYS TO GET / UPDATE THIS APP
+-----------------------------------
+A) ONE FILE, NO INTERNET  (best when GitHub is blocked)
+   - Take the file   mega_ai_installer.bat   (about 5.8 MB)
+   - Put it anywhere on the server and DOUBLE-CLICK it.
+   - It contains the WHOLE app inside itself, so it needs no download at all.
+   - It finds your folder by itself, keeps .env / data / workspace, and
+     starts the server at the end.  About 1-2 minutes.
+
+B) SMALL FILE, USES THE INTERNET  (27 KB)
+   - Double-click   install_mehran.bat
+   - It downloads the updater from 3 mirrors and installs the latest version.
+
+C) MANUAL  (if you already have mega-ai.zip)
+   - Put mega-ai.zip inside the app folder, then run:
+
+        python update_self.py --zip mega-ai.zip --restart
+
+RUNNING THE SERVER
+------------------
+   Double-click   run_server.bat    (keeps the window open and pauses on error)
+   or type:       python start_vps.py
+
+   The window MUST stay open. Closing it stops the app on your phone too.
+
+NEVER SENT / NEVER UPLOADED
+---------------------------
+   .env   (your API keys)   |   data/   (your history)   |   .venv/   |   workspace/
