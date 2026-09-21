@@ -11,6 +11,7 @@ prereqs.py — بررسی و نصب پیش‌نیازهای برنامه (کتا
 from __future__ import annotations
 
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -51,12 +52,26 @@ PY_DEPS: dict[str, str] = {**CORE_DEPS, **EXTRA_DEPS}
 # پرچم‌های pip برای اینترنتِ قطع‌وصل: تلاش بیشتر + مهلت بلندتر + فقط فایل آماده
 PIP_FLAGS = ("--retries", "20", "--timeout", "60", "--prefer-binary")
 
-# دستور pip اول (mirror ایرانی می‌تواند تحریم/کندی را دور بزند)
+# ترتیب مهم است: آینه‌های در دسترس از ایران اول (سریع و بدون فیلترشکن)،
+# بعد pypi.org و آینه‌های چین. اگر یکی جواب نداد، بعدی امتحان می‌شود.
 PIP_INDEXES = (
-    "https://pypi.org/simple",
-    "https://mirror-pypi.runflare.com/simple",
-    "https://pypi.tuna.tsinghua.edu.cn/simple",
+    "https://mirror-pypi.runflare.com/simple",      # 🇮🇷 ایرانی — بدون VPN
+    "https://pypi.org/simple",                       # اصلی
+    "https://pypi.tuna.tsinghua.edu.cn/simple",      # چین
+    "https://mirrors.aliyun.com/pypi/simple",        # چین
 )
+
+# ابزارهای سیستمی که برنامه واقعاً لازم دارد
+TOOLS = {
+    "ffmpeg": {
+        "why": "ساخت و تدوین ویدیو/صدا (استودیو، صداگذاری)",
+        "winget": "Gyan.FFmpeg",
+        "apt": "ffmpeg",
+        "brew": "ffmpeg",
+    },
+    "ffprobe": {"why": "اطلاعات ویدیو", "winget": None, "apt": "ffmpeg", "brew": "ffmpeg"},
+    "git": {"why": "نصب مهارت از مخزن", "winget": "Git.Git", "apt": "git", "brew": "git"},
+}
 
 
 _FORCE_LANG = (os.environ.get("MEGA_LANG") or "").strip().lower()
@@ -273,6 +288,78 @@ def tool_hint_en(name: str) -> str:
     return ""
 
 
+def upgrade_pip(py: str) -> bool:
+    """pip را تازه می‌کند — نصب‌های ناموفق اکثراً از pip قدیمی است."""
+    try:
+        for args in (["-m", "pip", "install", "--upgrade", "pip"],):
+            r = subprocess.run([py, *args, *PIP_FLAGS, "--quiet"], capture_output=True, text=True)
+            if r.returncode == 0:
+                return True
+    except Exception:  # noqa: BLE001
+        pass
+    return False
+
+
+def install_tool(name: str) -> bool:
+    """نصب یک ابزار سیستمی (مثل ffmpeg) با مدیر بستهٔ همین سیستم."""
+    info = TOOLS.get(name) or {}
+    try:
+        if os.name == "nt":
+            if not shutil.which("winget"):
+                return False
+            pkg = info.get("winget")
+            if not pkg:
+                return False
+            cmd = ["winget", "install", "--id", pkg, "-e", "--silent",
+                   "--accept-source-agreements", "--accept-package-agreements"]
+        else:
+            plat = platform.system()
+            mgr = "brew" if plat == "Darwin" else "apt"
+            pkg = info.get(mgr)
+            if not pkg:
+                return False
+            if mgr == "brew" and shutil.which("brew"):
+                cmd = ["brew", "install", pkg]
+            elif shutil.which("apt-get"):
+                cmd = ["sudo", "-n", "apt-get", "install", "-y", pkg] if os.geteuid() != 0 else \
+                      ["apt-get", "install", "-y", pkg]
+            else:
+                return False
+        _say(T(f"   ⇩ نصب {name} …", f"   installing {name} ..."))
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+        return r.returncode == 0 or bool(shutil.which(name))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def ensure_tools(install: bool = True) -> dict[str, bool]:
+    """ابزارهای سیستمی: گزارش + تلاش برای نصب خودکار (ffmpeg و…)."""
+    done: dict[str, bool] = {}
+    for name, info in TOOLS.items():
+        ok = bool(shutil.which(name))
+        done[name] = ok
+        if ok:
+            continue
+        hint = ""
+        if os.name == "nt":
+            hint = f"winget install {info.get('winget') or ''}"
+        elif platform.system() == "Darwin":
+            hint = f"brew install {info.get('brew') or ''}"
+        else:
+            hint = f"apt install {info.get('apt') or ''}"
+        if install and os.environ.get("MEGA_SKIP_TOOLS") != "1":
+            got = install_tool(name)
+            done[name] = got
+            _say(T(f"   {'✅' if got else '⚠️ '} {name}: {info['why']}",
+                   f"   {'[OK]' if got else '[!]'} {name}: {info['why']}"))
+            if not got:
+                _say(T(f"      دستی: {hint}", f"      manual: {hint}"))
+        else:
+            _say(T(f"   — {name} نصب نیست ({info['why']}) → {hint}",
+                   f"   - {name} missing ({info['why']}) -> {hint}"))
+    return done
+
+
 def ensure_all(py: str, install: bool = True, tools: bool = True) -> dict:
     """همهٔ پیش‌نیازها را بررسی (و در صورت اجازه) نصب می‌کند."""
     result: dict = {"python_ok": True, "installed": False, "missing_pkgs": [],
@@ -290,7 +377,9 @@ def ensure_all(py: str, install: bool = True, tools: bool = True) -> dict:
         if heavy:
             _say(T("🧩 کتابخانه‌های سنگین (اکسل/نمودار) غایب: ", "Missing heavy extras: ") + ", ".join(heavy))
         if install:
-            _say(T("   در حال نصب … (بار اول چند دقیقه)", "   installing ... (first run takes a few minutes)"))
+            _say(T("   در حال نصب … (بار اول چند دقیقه، حدود ۴۵ مگابایت)",
+                   "   installing ... (first run, a few minutes, ~45 MB)"))
+            upgrade_pip(py)
             ok = install_python(py)
             rest = missing_python(py, "core")
             rest_heavy = missing_python(py, "extra")

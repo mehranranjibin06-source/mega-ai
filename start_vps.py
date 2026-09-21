@@ -309,6 +309,13 @@ def main() -> int:
             f"Automatic setup did not finish ({e})")
         py = sys.executable
 
+    # ابزارهای سیستمی (ffmpeg برای استودیو/صدا) — بدون آن هم برنامه بالا می‌آید
+    try:
+        from mega.prereqs import ensure_tools  # type: ignore
+        ensure_tools(install=True)
+    except Exception:  # noqa: BLE001
+        pass
+
     # اگر با پایتون محیط مجازی نصب نشد → یک بار با پایتون سیستم امتحان کن
     if not _can_import(py, "fastapi") and py != sys.executable:
         say("ℹ️  نصب در .venv کامل نشد → با پایتون سیستم امتحان می‌کنم …",

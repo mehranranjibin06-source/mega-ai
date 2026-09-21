@@ -563,3 +563,20 @@ def test_new_free_providers() -> None:
                  "avalai.ir", "llm7.io", "build.nvidia.com", "z.ai",
                  "aistudio.google.com", "console.mistral.ai"):
         assert need in g, f"راهنما لینک {need} را ندارد"
+
+
+def test_auto_prereqs() -> None:
+    """نصب خودکار پیش‌نیازها: آینهٔ ایرانی اول، ارتقای pip، نصب خودکار ابزارها."""
+    root = Path(__file__).resolve().parents[1]
+    src = (root / "mega" / "prereqs.py").read_text(encoding="utf-8")
+    start = (root / "start_vps.py").read_text(encoding="utf-8")
+    assert "mirror-pypi.runflare.com" in src, "آینهٔ ایرانی pip نیست"
+    assert src.index("runflare") < src.index("pypi.org/simple"), "آینهٔ ایرانی باید اول باشد"
+    assert "def upgrade_pip" in src and "def ensure_tools" in src and "def install_tool" in src
+    assert "Gyan.FFmpeg" in src, "نصب خودکار ffmpeg در ویندوز نیست"
+    assert "MEGA_SKIP_TOOLS" in src, "راه خاموش‌کردن نصب ابزارها نیست"
+    assert "ensure_tools(install=True)" in start, "start_vps ابزارها را نصب نمی‌کند"
+    sth = root / "START-HERE.txt"
+    assert sth.is_file(), "START-HERE.txt نیست"
+    txt = sth.read_bytes().decode("utf-8-sig")
+    assert "start_vps.py" in txt and "mehran" in txt and "pip install" in txt
