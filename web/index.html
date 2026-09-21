@@ -189,6 +189,12 @@
   .upd{display:flex;align-items:center;gap:8px;background:#0f1631;border:1px solid var(--line);
         border-radius:13px;padding:10px 12px;font-size:13.5px}
 </style>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#080c1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="مهران AI">
+<link rel="apple-touch-icon" href="/assets/logo_icon_256.png">
 </head>
 <body>
 <header>
@@ -248,6 +254,18 @@
     <div class="stat"><b id="dAddons">—</b><span>افزودنی آماده</span></div>
   </div>
 
+  <div class="card" style="margin-top:14px" id="careCard">
+    <h3>🩺 نگهداری خودکار <span class="hint">پشتیبان · تست دوره‌ای · نصب روی گوشی</span></h3>
+    <div id="careLine" class="hint">در حال خواندن وضعیت …</div>
+    <div class="row" style="margin-top:10px;flex-wrap:wrap">
+      <button class="primary" onclick="careBackupNow()">💾 پشتیبان بگیر و دانلود کن</button>
+      <button class="ghost" onclick="careRefresh()">🔄 تازه‌سازی</button>
+      <button class="ghost" onclick="careInstall()">📱 نصب روی گوشی</button>
+      <button class="ghost" onclick="careBackups()">🗂 پشتیبان‌های قبلی</button>
+    </div>
+    <div id="careList" class="hint" style="margin-top:8px"></div>
+  </div>
+
   <div class="card" style="margin-top:14px">
     <h3>⚡ دسترسی سریع</h3>
     <div class="tiles">
@@ -268,6 +286,8 @@
       <div class="tile" data-go="keys"><span class="ic">⚙️</span><b>کلیدها</b><span>وصل کردن هوش</span></div>
       <div class="tile" onclick="histOpen()"><span class="ic">📜</span><b>تاریخچه</b><span>پرامپت‌های قبلی · پاک کردن</span></div>
       <div class="tile" onclick="updOpen()"><span class="ic">🔄</span><b>آپدیت</b><span>نسخهٔ تازه بدون CMD</span></div>
+      <div class="tile" onclick="careBackupNow()"><span class="ic">💾</span><b>پشتیبان</b><span>کلیدها و تاریخچه، یک کلیک</span></div>
+      <div class="tile" onclick="careInstall()"><span class="ic">📱</span><b>نصب روی گوشی</b><span>آیکون مثل برنامهٔ واقعی</span></div>
     </div>
   </div>
 
@@ -1678,5 +1698,6 @@ setInterval(loadHealth, 60000);
     </div>
   </div>
 </div>
+<script>if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})});}</script>
 </body>
 </html>

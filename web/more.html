@@ -68,6 +68,12 @@
   .spin{display:inline-block;width:14px;height:14px;border:2px solid #ffffff44;border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
   @keyframes sp{to{transform:rotate(360deg)}}
 </style>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#080c1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="مهران AI">
+<link rel="apple-touch-icon" href="/assets/logo_icon_256.png">
 </head>
 <body>
 <header>
@@ -296,5 +302,6 @@ if(["weather","radio","news","translate"].includes(h)){
   document.querySelectorAll(".tab").forEach(x=>{ if(x.dataset.p===h) x.click(); });
 } else { boot("weather"); }
 </script>
+<script>if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})});}</script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 # ── کلیدها و داده‌ی خصوصی (هرگز کامیت نشود)
 .env
 data/
+backups/
 workspace/
 skills/installed-pip.txt
 

@@ -32,6 +32,12 @@
   .hint{color:var(--dim);font-size:12px;margin:10px 2px}
   .empty{color:var(--dim);text-align:center;padding:40px 0}
 </style>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#080c1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="مهران AI">
+<link rel="apple-touch-icon" href="/assets/logo_icon_256.png">
 </head>
 <body>
 <div class="top">
@@ -107,5 +113,6 @@ $("#q").oninput=e=>{ Q=e.target.value; render(); };
 $("#refresh").onclick=()=>load(true);
 load(false);
 </script>
+<script>if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})});}</script>
 </body>
 </html>

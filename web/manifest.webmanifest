@@ -1,0 +1,47 @@
+{
+  "name": "MehranAiShabestar — ابرهوش مهران",
+  "short_name": "مهران AI",
+  "description": "دستیار هوش مصنوعی فارسی: ساخت ویدیو، تحلیل، سایت، تلویزیون، رادیو و کارگزار",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#080c1a",
+  "theme_color": "#080c1a",
+  "icons": [
+    {
+      "src": "/assets/logo_icon_256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/logo_icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/logo_icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "کارگزار",
+      "url": "/?tab=agent"
+    },
+    {
+      "name": "تلویزیون",
+      "url": "/tv"
+    },
+    {
+      "name": "افزودنی‌ها",
+      "url": "/more"
+    }
+  ]
+}

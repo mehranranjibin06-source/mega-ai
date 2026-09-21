@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import re
+import json
 from pathlib import Path
 
 import pytest
@@ -601,3 +602,44 @@ def test_autostart_files() -> None:
     src = (root / "start_vps.py").read_text(encoding="utf-8")
     assert "def write_port_file" in src and "PORT.txt" in src, "PORT.txt نوشته نمی‌شود"
     assert "write_port_file(port, lan_ip())" in src, "فراخوانی PORT.txt نیست"
+
+
+def test_v99_selfcare() -> None:
+    """v9.9: PWA + پشتیبان‌گیری + تست خودکار + روت‌های سرور."""
+    import sys as _sys
+    root = Path(__file__).resolve().parents[1]
+
+    man = json.loads((root / "web" / "manifest.webmanifest").read_text(encoding="utf-8"))
+    assert man["display"] == "standalone" and man["start_url"] == "/"
+    assert len(man["icons"]) >= 2 and man["dir"] == "rtl"
+
+    sw = (root / "web" / "sw.js").read_text(encoding="utf-8")
+    assert "addEventListener(\"fetch\"" in sw and "caches" in sw and "/api/" in sw
+
+    for page in ("index", "simple", "terminal", "tv", "more", "guide"):
+        h = (root / "web" / f"{page}.html").read_text(encoding="utf-8")
+        assert "manifest.webmanifest" in h, f"{page}: manifest"
+        assert "serviceWorker" in h, f"{page}: service worker"
+
+    _sys.path.insert(0, str(root))
+    from mega import backup
+    res = backup.make_backup(tag="test")
+    try:
+        assert res["ok"] and Path(res["path"]).is_file()
+        assert res["files"] >= 2, "زیپ پشتیبان خالی است"
+        rows0 = backup.list_backups()
+        assert rows0 and rows0[0]["name"] == res["name"]
+        assert backup.due(24.0) is False
+    finally:
+        Path(res["path"]).unlink(missing_ok=True)
+
+    src = (root / "server.py").read_text(encoding="utf-8")
+    for need in ("/manifest.webmanifest", "/sw.js", "/api/selfcare", "/api/health/report",
+                 "/api/backup/list", "/api/backup/run", "/api/backup/download", "/api/backup/file/",
+                 "_health_loop", "_backup_loop", "_boot_notify", "_v99_startup"):
+        assert need in src, f"server.py کم دارد: {need}"
+    assert "from mega.config import (APP_VERSION, ENV_PATH, ROOT," in src, "ROOT ایمپورت نشده (باگ فضای دیسک)"
+
+    h = (root / "web" / "index.html").read_text(encoding="utf-8")
+    for need in ("careCard", "careBackupNow", "careInstall", "careRefresh", "نگهداری خودکار"):
+        assert need in h, f"داشبورد کم دارد: {need}"

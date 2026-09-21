@@ -29,6 +29,12 @@
     font-size:14px; color:#7c5a00; margin:12px 0 }
   .ok { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46 }
 </style>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#080c1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="مهران AI">
+<link rel="apple-touch-icon" href="/assets/logo_icon_256.png">
 </head>
 <body>
 <div class="wrap">
@@ -228,5 +234,6 @@
     تو فقط ۴ کلیک می‌کنی و یک متن کپی می‌کنی.
   </div>
 </div>
+<script>if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})});}</script>
 </body>
 </html>

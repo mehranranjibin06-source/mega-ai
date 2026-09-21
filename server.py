@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from mega.agent import MegaAgent
-from mega.config import (APP_VERSION, ENV_PATH, SETTINGS, WEB_DIR, WORKSPACE, configured_providers, key_status,
+from mega.config import (APP_VERSION, ENV_PATH, ROOT, SETTINGS, WEB_DIR, WORKSPACE, configured_providers, key_status,
                          has_real_keys, real_configured_providers,
                          load_env, save_keys, PROVIDERS)
 from mega.media import THEMES, VOICES, make_ad, make_image, make_video, stt, tts
@@ -1436,6 +1436,185 @@ async def simple_chat(text: str = "", session: str = "ساده", tier: str = "")
     return StreamingResponse(gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache, no-transform",
                                       "X-Accel-Buffering": "no"})
+
+
+# ═══════════════ v9.9 │ نگهداری خودکار: پشتیبان، سلامت، PWA، اطلاع تلگرام ═══════════════
+_START_TS = time.time()
+
+
+def _env_num(name: str, default: float) -> float:
+    try:
+        return float((os.environ.get(name) or "").strip() or default)
+    except Exception:  # noqa: BLE001
+        return default
+
+
+@app.get("/manifest.webmanifest")
+async def pwa_manifest():
+    """فایل «نصب روی گوشی» تا اپ روی صفحهٔ اصلی موبایل آیکون بگیرد."""
+    target = WEB_DIR / "manifest.webmanifest"
+    if not target.is_file():
+        return JSONResponse({"ok": False, "error": "manifest نیست"}, status_code=404)
+    return FileResponse(target, media_type="application/manifest+json")
+
+
+@app.get("/sw.js")
+async def pwa_sw():
+    """سرویس‌ورکر (شبکه‌اول) — اپ موبایل مثل یک برنامهٔ واقعی باز می‌شود."""
+    target = WEB_DIR / "sw.js"
+    if not target.is_file():
+        return JSONResponse({"ok": False, "error": "sw.js نیست"}, status_code=404)
+    return FileResponse(target, media_type="application/javascript",
+                        headers={"Service-Worker-Allowed": "/", "Cache-Control": "no-cache"})
+
+
+@app.get("/api/health/report")
+async def api_health_report():
+    """نتیجهٔ آخرین تست خودکار (هر چند ساعت یک‌بار خودش می‌گیرد)."""
+    hf = ROOT / "data" / "health.json"
+    if not hf.is_file():
+        return {"ok": True, "report": None, "note": "اولین تست خودکار چند لحظه بعد از روشن شدن انجام می‌شود"}
+    try:
+        return {"ok": True, "report": json.loads(hf.read_text(encoding="utf-8"))}
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"ok": False, "error": str(e)[:120]}, status_code=500)
+
+
+@app.get("/api/backup/list")
+async def api_backup_list():
+    from mega import backup as _bk
+    return {"ok": True, "rows": _bk.list_backups()}
+
+
+@app.post("/api/backup/run")
+async def api_backup_run(payload: dict = None):
+    """پشتیبان بساز و ذخیره کن (در پوشهٔ backups)."""
+    from mega import backup as _bk
+    full = bool((payload or {}).get("full"))
+    return await asyncio.to_thread(_bk.make_backup, full, "manual")
+
+
+@app.get("/api/backup/download")
+async def api_backup_download(full: int = 0):
+    """پشتیبان تازه بساز و همین حالا برای دانلود بفرست."""
+    from mega import backup as _bk
+    res = await asyncio.to_thread(_bk.make_backup, bool(full), "download")
+    return FileResponse(res["path"], filename=res["name"], media_type="application/zip")
+
+
+@app.get("/api/backup/file/{name}")
+async def api_backup_file(name: str):
+    from mega import backup as _bk
+    target = _bk.BACKUP_DIR / Path(name).name
+    if not target.is_file():
+        return JSONResponse({"ok": False, "error": "پشتیبان پیدا نشد"}, status_code=404)
+    return FileResponse(target, filename=target.name, media_type="application/zip")
+
+
+@app.get("/api/selfcare")
+async def api_selfcare():
+    """وضعیت نگهداری خودکار برای داشبورد: بالابودن، آخرین تست، آخرین پشتیبان."""
+    from mega import backup as _bk
+    hf = ROOT / "data" / "health.json"
+    last_health = None
+    if hf.is_file():
+        try:
+            last_health = json.loads(hf.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            last_health = None
+    phone = ""
+    pf = ROOT / "PORT.txt"
+    if pf.is_file():
+        for line in pf.read_text(encoding="utf-8", errors="replace").splitlines():
+            if line.startswith("PHONE="):
+                phone = line.split("=", 1)[1].strip()
+    return {"ok": True, "version": APP_VERSION, "ts_start": int(_START_TS),
+            "uptime": int(time.time() - _START_TS), "port": _listen_port(), "phone": phone,
+            "health": last_health, "backup": _bk.last(),
+            "backup_hours": _env_num("MEGA_BACKUP_HOURS", 24.0),
+            "health_hours": _env_num("MEGA_HEALTH_HOURS", 6.0),
+            "telegram": bool((os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip())}
+
+
+async def _health_loop() -> None:
+    """هر چند ساعت خودش تست کامل می‌گیرد و نتیجه را در data/health.json می‌نویسد."""
+    await asyncio.sleep(max(5.0, _env_num("MEGA_HEALTH_DELAY", 120.0)))
+    while True:
+        t0 = time.time()
+        try:
+            data = await selftest(deep=0)
+            sm = data.get("summary", {})
+            rep = {"when": data.get("checked_at") or time.strftime("%Y-%m-%d %H:%M:%S"),
+                   "ts": int(time.time()), "version": APP_VERSION,
+                   "ok": sm.get("ok", 0), "fail": sm.get("fail", 0), "skip": sm.get("skip", 0),
+                   "verdict": data.get("verdict", ""), "seconds": round(time.time() - t0, 1),
+                   "fails": [it.get("name") for sec in data.get("sections", [])
+                             for it in sec.get("items", []) if it.get("ok") is False][:12]}
+            (ROOT / "data").mkdir(parents=True, exist_ok=True)
+            (ROOT / "data" / "health.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1),
+                                                        encoding="utf-8")
+            print(f"[health] {rep['ok']}✅ / {rep['fail']}❌ / {rep['skip']}⚪  ({rep['seconds']}s)", flush=True)
+        except Exception as e:  # noqa: BLE001
+            print(f"[health] تست خودکار نشد: {type(e).__name__}", flush=True)
+        await asyncio.sleep(max(900.0, _env_num("MEGA_HEALTH_HOURS", 6.0) * 3600))
+
+
+async def _backup_loop() -> None:
+    """پشتیبان خودکار دوره‌ای (پیش‌فرض هر ۲۴ ساعت)."""
+    from mega import backup as _bk
+    hours = _env_num("MEGA_BACKUP_HOURS", 24.0)
+    if hours <= 0:
+        print("[backup] پشتیبان خودکار خاموش است (MEGA_BACKUP_HOURS=0)", flush=True)
+        return
+    await asyncio.sleep(45)
+    while True:
+        try:
+            if _bk.due(hours):
+                res = await asyncio.to_thread(_bk.make_backup, False, "auto")
+                print(f"[backup] {res['name']}  ({res['files']} فایل · {res['bytes'] / 1024:.0f}KB)", flush=True)
+        except Exception as e:  # noqa: BLE001
+            print(f"[backup] نشد: {type(e).__name__}", flush=True)
+        await asyncio.sleep(1800)
+
+
+async def _boot_notify() -> None:
+    """«سرور روشن شد» را در تلگرام می‌فرستد (اگر TELEGRAM_BOT_TOKEN و TELEGRAM_CHAT_ID بگذاری)."""
+    token = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
+    chat = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip()
+    if not (token and chat):
+        return
+    try:
+        import httpx
+        phone = ""
+        pf = ROOT / "PORT.txt"
+        if pf.is_file():
+            for line in pf.read_text(encoding="utf-8", errors="replace").splitlines():
+                if line.startswith("PHONE="):
+                    phone = line.split("=", 1)[1].strip()
+        text = (f"🟢 MehranAiShabestar روشن شد\nنسخه: {APP_VERSION}\n"
+                f"آدرس: {phone or ('http://<server-ip>:' + str(_listen_port()))}")
+        async with httpx.AsyncClient(timeout=15) as c:
+            await c.post(f"https://api.telegram.org/bot{token}/sendMessage",
+                         json={"chat_id": chat, "text": text})
+        print("[telegram] پیام «روشن شد» فرستاده شد ✅", flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"[telegram] اطلاع نرفت: {type(e).__name__}", flush=True)
+
+
+async def _v99_startup() -> None:
+    """نگهداری خودکار در پس‌زمینه: سلامت + پشتیبان + اطلاع تلگرام."""
+    for coro in (_health_loop(), _backup_loop(), _boot_notify()):
+        try:
+            asyncio.create_task(coro)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+if hasattr(app, "add_event_handler"):
+    app.add_event_handler("startup", _v99_startup)     # نسخه‌های تازه
+else:
+    app.router.on_startup.append(_v99_startup)         # نسخه‌های قدیمی‌تر
+
 
 
 _maybe_bridge()

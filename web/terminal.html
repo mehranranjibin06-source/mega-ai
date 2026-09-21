@@ -33,6 +33,12 @@
   .cur::after { content:"▋"; animation:bl 1s steps(1) infinite; color:#39d353 }
   @keyframes bl { 50% { opacity:0 } }
 </style>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#080c1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="مهران AI">
+<link rel="apple-touch-icon" href="/assets/logo_icon_256.png">
 </head>
 <body>
 <div id="wrap">
@@ -176,5 +182,6 @@ L('dim', 'ترمینال ابرهوش — هر کاری که بنویسی، ان
 L('dim', 'برای شروع یک کلید API در پنل ثبت کن (بخش کلیدها)، بعد بنویس: «یک اسکریپت بنویس که ...»');
 inp.focus();
 </script>
+<script>if("serviceWorker" in navigator){addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})});}</script>
 </body>
 </html>
